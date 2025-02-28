@@ -5,46 +5,100 @@ using UnityEngine;
 public class CubeBehaviour : MonoBehaviour
 {
     public GameObject obj;
-    public Rigidbody rb;
-    public Collider coll;
     public Collider barrier;
 
     public Material defaultMat;
     public Material activeMat;
-    public Material dragMaterial;
-    public float CD = 1.0f;
+    public Material grabbingMaterial;
 
-    private bool dragging = false;
-    private Vector3 dragOrigin;
+    public float CD_Horizontal = 1.0f;
+    public float CD_Vertical = 1.0f;
+    public float CD_Rotational = 1.0f;
 
-    private OVRInput.Button draggingButton;
-    private OVRInput.Controller draggingController;
+    private Collider _collider;
+    private Rigidbody _rigidbody;
+    private Renderer _renderer;
+
+    private bool isHighlighted;
+    private bool isGrabbed;
+    private bool hasCollided;
+    private bool ignoreCollision;
+
+    private OVRInput.Button leftButton = OVRInput.Button.PrimaryHandTrigger;
+    private OVRInput.Button rightButton = OVRInput.Button.SecondaryHandTrigger;
+    private OVRInput.Button grabbingButton;
+
+    private OVRInput.Controller leftHand = OVRInput.Controller.LTouch;
+    private OVRInput.Controller rightHand = OVRInput.Controller.RTouch;
+    private OVRInput.Controller grabbingController;
 
     private Quaternion controllerInitRot;
     private Quaternion objInitRot;
+    private Vector3 controllerInitPos;
+    private Vector3 objInitPos;
 
-    private bool hasCollided = false;
-
-    private void StopDragging()
+    private void Highlight()
     {
-        rb.isKinematic = false;
-        dragging = false;
-        obj.GetComponent<Renderer>().material = defaultMat;
+        if (!isHighlighted)
+        {
+            isHighlighted = true;
+            _renderer.material = activeMat;
+        }
+    }
+
+    private void UnHighlight()
+    {
+        if (isHighlighted)
+        {
+            isHighlighted = false;
+            _renderer.material = defaultMat;
+        }
+    }
+
+    private void StopGrabbing()
+    {
+        isGrabbed = false;
+        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
+        _renderer.material = defaultMat;
+    }
+
+    private void StartGrabbing(OVRInput.Controller controller, OVRInput.Button button)
+    {
+        isGrabbed = true;
+        _rigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
+        _renderer.material = grabbingMaterial;
+
+        //Ignore collision at the start of grab collision (this is necessary to grab objects that are already colliding at interaction start)
+        ignoreCollision = true;
+
+        grabbingButton = button;
+
+        grabbingController = controller;
+        controllerInitPos = OVRInput.GetLocalControllerPosition(controller);
+        controllerInitRot = OVRInput.GetLocalControllerRotation(controller);
+
+        objInitPos = obj.transform.position;
+        objInitRot = obj.transform.rotation;
     }
 
     // Start is called before the first frame update
     void Start()
     {
-
+        isHighlighted = false;
+        isGrabbed = false;
+        hasCollided = false;
+        ignoreCollision = false;
+        _collider = obj.GetComponent<Collider>();
+        _rigidbody = obj.GetComponent<Rigidbody>();
+        _renderer = obj.GetComponent<Renderer>();
     }
 
-    // Update is called once per frame
-    void Update()
+    private void Update()
     {
         if (hasCollided)
         {
-            //Await button release before allowing to drag again
-            var released = !OVRInput.Get(draggingButton);
+            //Await button release before allowing to grab again
+            var released = !OVRInput.Get(grabbingButton);
 
             if (released)
             {
@@ -53,77 +107,74 @@ public class CubeBehaviour : MonoBehaviour
         }
         else
         {
-            Vector3 handLeftPosition = OVRInput.GetLocalControllerPosition(OVRInput.Controller.LTouch);
-            Vector3 handRightPosition = OVRInput.GetLocalControllerPosition(OVRInput.Controller.RTouch);
-
-
-            if (!dragging)
+            if (isGrabbed)
             {
-                var leftTouch = coll.bounds.Contains(handLeftPosition);
-                var rightTouch = coll.bounds.Contains(handRightPosition);
+                //Check for end of grab interaction
 
-                if (leftTouch || rightTouch)
+                var buttonReleased = !OVRInput.Get(grabbingButton);
+                var colliding = _collider.bounds.Intersects(barrier.bounds);
+
+                if (buttonReleased)
                 {
-                    obj.GetComponent<Renderer>().material = activeMat;
-
-                    var leftPress = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger);
-                    var rightPress = OVRInput.Get(OVRInput.Button.SecondaryHandTrigger);
-
-                    if (leftPress || rightPress)
-                    {
-                        obj.GetComponent<Renderer>().material = dragMaterial;
-
-                        dragging = true;
-                        rb.isKinematic = true;
-
-                        draggingButton = leftPress ? OVRInput.Button.PrimaryHandTrigger : OVRInput.Button.SecondaryHandTrigger;
-                        draggingController = leftPress ? OVRInput.Controller.LTouch : OVRInput.Controller.RTouch;
-
-                        dragOrigin = OVRInput.GetLocalControllerPosition(draggingController);
-                        controllerInitRot = OVRInput.GetLocalControllerRotation(draggingController);
-                        objInitRot = obj.transform.rotation;
-
-                    }
-                    else
-                    {
-                        obj.GetComponent<Renderer>().material = activeMat;
-                    }
+                    StopGrabbing();
+                }
+                else if (colliding && !ignoreCollision)
+                {
+                    hasCollided = true;
+                    StopGrabbing();
                 }
                 else
                 {
-                    obj.GetComponent<Renderer>().material = defaultMat;
+                    //Continue grab interaction and update transform
+
+                    if (!colliding && ignoreCollision) ignoreCollision = false; //set flag to stop grab interaction on next collision as soon as object is unstuck
+
+                    //Apply position diff during grab interaction with C/D
+                    var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController);
+                    var posDiff = controllerCurrentPos - controllerInitPos;
+                    var scaledPosDif = new Vector3(x: posDiff.x * CD_Horizontal, y: posDiff.y * CD_Horizontal, z: posDiff.z * CD_Vertical);
+
+                    obj.transform.position = objInitPos + scaledPosDif;
+
+                    //Apply rotation diff during grab interaction with C/D
+                    var controllerCurrentRot = OVRInput.GetLocalControllerRotation(grabbingController);
+                    var rotDiff = controllerCurrentRot * Quaternion.Inverse(controllerInitRot);
+                    var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD_Rotational);
+
+                    obj.transform.rotation = scaledRotDiff * objInitRot;
                 }
             }
             else
             {
-                var released = !OVRInput.Get(draggingButton);
-                var collided = coll.bounds.Intersects(barrier.bounds);
+                //Check for highlighting and start of grab interaction
 
-                if (released)
+                var leftHandPos = OVRInput.GetLocalControllerPosition(leftHand);
+                var rightHandPos = OVRInput.GetLocalControllerPosition(rightHand);
+
+                var leftTouch = _collider.bounds.Contains(leftHandPos);
+                var rightTouch = _collider.bounds.Contains(rightHandPos);
+
+                if (leftTouch)
                 {
-                    StopDragging();
+                    Highlight();
+
+                    var leftPress = OVRInput.Get(leftButton);
+
+                    if (leftPress) StartGrabbing(leftHand, leftButton);
                 }
-                else if (collided)
+                else if (rightTouch)
                 {
-                    hasCollided = true;
-                    StopDragging();
+                    Highlight();
+
+                    var rightPress = OVRInput.Get(rightButton);
+
+                    if (rightPress) StartGrabbing(rightHand, rightButton);
                 }
                 else
                 {
-                    //Continue dragging
-                    var controllerPos = OVRInput.GetLocalControllerPosition(draggingController);
-                    var controllerRot = OVRInput.GetLocalControllerRotation(draggingController);
-
-                    var rotDiff = controllerRot * Quaternion.Inverse(controllerInitRot);
-
-                    var distToOrigin = controllerPos - dragOrigin;
-
-                    obj.transform.position = dragOrigin + distToOrigin * CD;
-                    obj.transform.rotation = Quaternion.Slerp(Quaternion.identity, rotDiff, CD) * objInitRot;
+                    UnHighlight();
                 }
             }
         }
-
-
     }
 }

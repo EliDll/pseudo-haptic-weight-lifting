@@ -1479,7 +1479,7 @@ GameObject:
   - component: {fileID: 335374760}
   - component: {fileID: 335374761}
   m_Layer: 0
-  m_Name: Heavy Cube
+  m_Name: Large CD Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1565,8 +1565,8 @@ Transform:
   m_GameObject: {fileID: 335374755}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 3, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalPosition: {x: 0.5, y: 2.5, z: 0}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -1611,13 +1611,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   obj: {fileID: 335374755}
-  rb: {fileID: 335374760}
-  coll: {fileID: 335374756}
   barrier: {fileID: 1685703982}
   defaultMat: {fileID: 2100000, guid: 9f6c1dede983356448044664e10fad2f, type: 2}
   activeMat: {fileID: 2100000, guid: 1f3e0b179feb12b46bccc1e15554d2c9, type: 2}
-  dragMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
-  CD: 0.6
+  grabbingMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
+  CD_Horizontal: 0.8
+  CD_Vertical: 0.6
+  CD_Rotational: 0.4
 --- !u!1 &336276841
 GameObject:
   m_ObjectHideFlags: 0
@@ -1796,7 +1796,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 358442140}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5cc5c234723e3a54d8dd09b131117743, type: 3}
   m_Name: 
@@ -2081,7 +2081,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 396300359}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 5cc5c234723e3a54d8dd09b131117743, type: 3}
   m_Name: 
@@ -5115,7 +5115,7 @@ GameObject:
   - component: {fileID: 978039729}
   - component: {fileID: 978039728}
   m_Layer: 0
-  m_Name: Light Cube
+  m_Name: Normal Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5134,13 +5134,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   obj: {fileID: 978039727}
-  rb: {fileID: 978039729}
-  coll: {fileID: 978039730}
   barrier: {fileID: 1685703982}
-  defaultMat: {fileID: 2100000, guid: 9f6c1dede983356448044664e10fad2f, type: 2}
+  defaultMat: {fileID: 2100000, guid: 276976e9ea9489e4c8957cd0e094fed8, type: 2}
   activeMat: {fileID: 2100000, guid: 1f3e0b179feb12b46bccc1e15554d2c9, type: 2}
-  dragMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
-  CD: 1
+  grabbingMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
+  CD_Horizontal: 1
+  CD_Vertical: 1
+  CD_Rotational: 1
 --- !u!54 &978039729
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5209,7 +5209,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9f6c1dede983356448044664e10fad2f, type: 2}
+  - {fileID: 2100000, guid: 276976e9ea9489e4c8957cd0e094fed8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -5248,7 +5248,7 @@ Transform:
   m_GameObject: {fileID: 978039727}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1.5, z: 0}
+  m_LocalPosition: {x: 0.5, y: 1.5, z: 0}
   m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -9977,7 +9977,7 @@ GameObject:
   - component: {fileID: 1863905042}
   - component: {fileID: 1863905041}
   m_Layer: 0
-  m_Name: Normal Cube
+  m_Name: Small CD Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -9996,13 +9996,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   obj: {fileID: 1863905040}
-  rb: {fileID: 1863905042}
-  coll: {fileID: 1863905043}
   barrier: {fileID: 1685703982}
-  defaultMat: {fileID: 2100000, guid: 9f6c1dede983356448044664e10fad2f, type: 2}
+  defaultMat: {fileID: 2100000, guid: 7bb304f77d320c2498312e3ea2edfaca, type: 2}
   activeMat: {fileID: 2100000, guid: 1f3e0b179feb12b46bccc1e15554d2c9, type: 2}
-  dragMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
-  CD: 0.8
+  grabbingMaterial: {fileID: 2100000, guid: 87831973bfa63ce4a929d742e2e20e2a, type: 2}
+  CD_Horizontal: 0.9
+  CD_Vertical: 0.8
+  CD_Rotational: 0.7
 --- !u!54 &1863905042
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -10071,7 +10071,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 9f6c1dede983356448044664e10fad2f, type: 2}
+  - {fileID: 2100000, guid: 7bb304f77d320c2498312e3ea2edfaca, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -10110,8 +10110,8 @@ Transform:
   m_GameObject: {fileID: 1863905040}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 2, z: 0}
-  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
+  m_LocalPosition: {x: 0.5, y: 2, z: 0}
+  m_LocalScale: {x: 0.3, y: 0.3, z: 0.3}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -11443,7 +11443,7 @@ AudioListener:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2115164278}
-  m_Enabled: 1
+  m_Enabled: 0
 --- !u!20 &2115164281
 Camera:
   m_ObjectHideFlags: 0
