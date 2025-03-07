@@ -132,7 +132,7 @@ public class CubeBehaviour : MonoBehaviour
                     //Apply position diff during grab interaction with C/D
                     var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController);
                     var posDiff = controllerCurrentPos - controllerInitPos;
-                    var scaledPosDif = new Vector3(x: posDiff.x * CD_Horizontal, y: posDiff.y * CD_Horizontal, z: posDiff.z * CD_Vertical);
+                    var scaledPosDif = new Vector3(x: posDiff.x * CD_Horizontal, y: posDiff.y * CD_Vertical, z: posDiff.z * CD_Horizontal);
 
                     obj.transform.position = objInitPos + scaledPosDif;
 
