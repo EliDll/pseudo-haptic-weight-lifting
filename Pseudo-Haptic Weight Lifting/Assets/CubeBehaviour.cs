@@ -1,9 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#nullable enable
 
 public class CubeBehaviour : MonoBehaviour
 {
+    public DungeonMasterBehaviour DM;
+
     public GameObject obj;
     public Collider barrier;
 
@@ -11,26 +14,22 @@ public class CubeBehaviour : MonoBehaviour
     public Material activeMat;
     public Material grabbingMaterial;
 
-    public float CD_Horizontal = 1.0f;
-    public float CD_Vertical = 1.0f;
-    public float CD_Rotational = 1.0f;
-
     private Collider _collider;
     private Rigidbody _rigidbody;
     private Renderer _renderer;
 
-    private bool isHighlighted;
-    private bool isGrabbed;
-    private bool hasCollided;
-    private bool ignoreCollision;
-
     private OVRInput.Button leftButton = OVRInput.Button.PrimaryHandTrigger;
     private OVRInput.Button rightButton = OVRInput.Button.SecondaryHandTrigger;
-    private OVRInput.Button grabbingButton;
 
     private OVRInput.Controller leftHand = OVRInput.Controller.LTouch;
     private OVRInput.Controller rightHand = OVRInput.Controller.RTouch;
-    private OVRInput.Controller grabbingController;
+
+    private bool isHighlighted = false;
+    private bool hasCollided = false;
+    private bool ignoreCollision = false;
+
+    private OVRInput.Button? grabbingButton;
+    private OVRInput.Controller? grabbingController;
 
     private Quaternion controllerInitRot;
     private Quaternion objInitRot;
@@ -55,16 +54,8 @@ public class CubeBehaviour : MonoBehaviour
         }
     }
 
-    private void StopGrabbing()
-    {
-        isGrabbed = false;
-        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
-        _renderer.material = defaultMat;
-    }
-
     private void StartGrabbing(OVRInput.Controller controller, OVRInput.Button button)
     {
-        isGrabbed = true;
         _rigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
         _renderer.material = grabbingMaterial;
 
@@ -79,15 +70,21 @@ public class CubeBehaviour : MonoBehaviour
 
         objInitPos = obj.transform.position;
         objInitRot = obj.transform.rotation;
+
+        DM.Vibrate(grabbingController);
+    }
+
+    private void StopGrabbing()
+    {
+        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
+        _renderer.material = defaultMat;
+
+        DM.Vibrate(grabbingController);
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        isHighlighted = false;
-        isGrabbed = false;
-        hasCollided = false;
-        ignoreCollision = false;
         _collider = obj.GetComponent<Collider>();
         _rigidbody = obj.GetComponent<Rigidbody>();
         _renderer = obj.GetComponent<Renderer>();
@@ -95,53 +92,60 @@ public class CubeBehaviour : MonoBehaviour
 
     private void Update()
     {
-        if (hasCollided)
+        if (hasCollided && grabbingButton != null)
         {
             //Await button release before allowing to grab again
-            var released = !OVRInput.Get(grabbingButton);
+            var released = !OVRInput.Get(grabbingButton.Value);
 
             if (released)
             {
                 hasCollided = false;
+                grabbingButton = null;
             }
         }
         else
         {
-            if (isGrabbed)
+            if (grabbingButton != null)
             {
                 //Check for end of grab interaction
 
-                var buttonReleased = !OVRInput.Get(grabbingButton);
+                var buttonReleased = !OVRInput.Get(grabbingButton.Value);
                 var colliding = _collider.bounds.Intersects(barrier.bounds);
 
                 if (buttonReleased)
                 {
                     StopGrabbing();
+                    grabbingButton = null;
                 }
                 else if (colliding && !ignoreCollision)
                 {
-                    hasCollided = true;
                     StopGrabbing();
+                    hasCollided = true;
                 }
                 else
                 {
-                    //Continue grab interaction and update transform
+                    if(grabbingController != null)
+                    {
+                        //Continue grab interaction and update transform
 
-                    if (!colliding && ignoreCollision) ignoreCollision = false; //set flag to stop grab interaction on next collision as soon as object is unstuck
+                        if (!colliding && ignoreCollision) ignoreCollision = false; //set flag to stop grab interaction on next collision as soon as object is unstuck
 
-                    //Apply position diff during grab interaction with C/D
-                    var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController);
-                    var posDiff = controllerCurrentPos - controllerInitPos;
-                    var scaledPosDif = new Vector3(x: posDiff.x * CD_Horizontal, y: posDiff.y * CD_Vertical, z: posDiff.z * CD_Horizontal);
+                        var CD = DM.CDRatio;
 
-                    obj.transform.position = objInitPos + scaledPosDif;
+                        //Apply position diff during grab interaction with C/D
+                        var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
+                        var posDiff = controllerCurrentPos - controllerInitPos;
+                        var scaledPosDif = new Vector3(x: posDiff.x * CD.Horizontal, y: posDiff.y * CD.Vertical, z: posDiff.z * CD.Horizontal);
 
-                    //Apply rotation diff during grab interaction with C/D
-                    var controllerCurrentRot = OVRInput.GetLocalControllerRotation(grabbingController);
-                    var rotDiff = controllerCurrentRot * Quaternion.Inverse(controllerInitRot);
-                    var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD_Rotational);
+                        obj.transform.position = objInitPos + scaledPosDif;
 
-                    obj.transform.rotation = scaledRotDiff * objInitRot;
+                        //Apply rotation diff during grab interaction with C/D
+                        var controllerCurrentRot = OVRInput.GetLocalControllerRotation(grabbingController.Value);
+                        var rotDiff = controllerCurrentRot * Quaternion.Inverse(controllerInitRot);
+                        var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD.Rotational);
+
+                        obj.transform.rotation = scaledRotDiff * objInitRot;
+                    }
                 }
             }
             else
