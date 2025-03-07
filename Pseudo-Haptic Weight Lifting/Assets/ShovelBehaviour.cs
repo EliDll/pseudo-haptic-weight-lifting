@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
@@ -6,13 +7,24 @@ using UnityEngine;
 public class ShovelBehaviour : MonoBehaviour
 {
     public GameObject obj;
-    public Renderer HiltRenderer;
+    public GameObject loadObject;
 
-    public Material defaultMat;
-    public Material activeMat;
+    public Collider HiltCollider;
+    public Renderer HiltRenderer;
+    public Material DefaultHiltMaterial;
+    public Material ActiveHiltMaterial;
+
+    public Renderer LoadRenderer;
+    public Transform LoadTransform;
+
+    public Collider PileCollider;
+    public Transform PileTransform;
+
+    public Transform BladeTransform;
 
     private bool isHighlighted;
     private bool isGrabbed;
+    private bool isLoaded;
 
     private OVRInput.Button leftButton = OVRInput.Button.PrimaryHandTrigger;
     private OVRInput.Button rightButton = OVRInput.Button.SecondaryHandTrigger;
@@ -24,15 +36,42 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller grabbingController;
     private OVRInput.Controller secondaryController;
 
-    private Collider _collider;
     private Rigidbody _rigidbody;
+
+    private void VibrateMain()
+    {
+        startMainVib();
+        Invoke("stopMainVib", .1f);
+    }
+    private void startMainVib()
+    {
+        OVRInput.SetControllerVibration(1, 1, grabbingController);
+    }
+    private void stopMainVib()
+    {
+        OVRInput.SetControllerVibration(0, 0, grabbingController);
+    }
+
+    private void VibrateSecondary()
+    {
+        startSecondaryVib();
+        Invoke("stopSecondaryVib", .1f);
+    }
+    private void startSecondaryVib()
+    {
+        OVRInput.SetControllerVibration(1, 1, secondaryController);
+    }
+    private void stopSecondaryVib()
+    {
+        OVRInput.SetControllerVibration(0, 0, secondaryController);
+    }
 
     private void Highlight()
     {
         if (!isHighlighted)
         {
             isHighlighted = true;
-            HiltRenderer.material = activeMat;
+            HiltRenderer.material = ActiveHiltMaterial;
         }
     }
 
@@ -41,26 +80,60 @@ public class ShovelBehaviour : MonoBehaviour
         if (isHighlighted)
         {
             isHighlighted = false;
-            HiltRenderer.material = defaultMat;
+            HiltRenderer.material = DefaultHiltMaterial;
         }
-    }
-
-    private void StopGrabbing()
-    {
-        isGrabbed = false;
-        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
     }
 
     private void StartGrabbing(OVRInput.Controller primary, OVRInput.Button button)
     {
         isGrabbed = true;
         _rigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
-        HiltRenderer.material = defaultMat;
-
+        HiltRenderer.material = DefaultHiltMaterial;
         grabbingButton = button;
 
         grabbingController = primary;
         secondaryController = primary == leftHand ? rightHand : leftHand;
+
+        VibrateMain();
+    }
+
+    private void StopGrabbing()
+    {
+        isGrabbed = false;
+        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
+
+        VibrateMain();
+    }
+
+    private void LoadBlade()
+    {
+        isLoaded = true;
+        LoadRenderer.enabled = true;
+
+        var loadScale = LoadTransform.localScale;
+        var loadVolume = loadScale.x * loadScale.y * loadScale.z;
+
+        var pileScale = PileTransform.localScale;
+
+        var pileYDiff = loadVolume / (pileScale.x * pileScale.z);
+
+        PileTransform.localScale = new Vector3(x: pileScale.x, y: Math.Max(pileScale.y - pileYDiff, 0), z: pileScale.z);
+
+        VibrateMain();
+        VibrateSecondary();
+    }
+
+    private void UnloadBlade()
+    {
+        isLoaded = false;
+        LoadRenderer.enabled = false;
+
+        //Replace sticky load with new rigidbody
+        var looseLoad = GameObject.Instantiate(loadObject, LoadTransform.position, LoadTransform.rotation);
+        looseLoad.SetActive(true);
+
+        VibrateMain();
+        VibrateSecondary();
     }
 
     // Start is called before the first frame update
@@ -68,7 +141,9 @@ public class ShovelBehaviour : MonoBehaviour
     {
         isHighlighted = false;
         isGrabbed = false;
-        _collider = obj.GetComponent<Collider>();
+        isLoaded = false;
+        LoadRenderer.enabled = false;
+
         _rigidbody = obj.GetComponent<Rigidbody>();
     }
 
@@ -101,16 +176,41 @@ public class ShovelBehaviour : MonoBehaviour
 
                 var controllerDirection = secondaryCurrentPos - primaryCurrentPos;
 
-                var pitchVec = new Vector3(x: 0, y: controllerDirection.y, z: controllerDirection.z);
-                var pitch = Vector3.SignedAngle(Vector3.forward, pitchVec, Vector3.right);
+                var shovelRotation = Quaternion.LookRotation(controllerDirection, controllerUp);
 
-                var yawVec = new Vector3(x: controllerDirection.x, y: 0, z: controllerDirection.z);
-                var yaw = Vector3.SignedAngle(Vector3.forward, yawVec, Vector3.up);
+                obj.transform.rotation = shovelRotation;
 
-                var rollVec = new Vector3(x: controllerUp.x, y: controllerUp.y, z: 0);
-                var roll = Vector3.SignedAngle(Vector3.up, rollVec, Vector3.forward);
+                //Update shovel load
 
-                obj.transform.rotation = Quaternion.LookRotation(controllerDirection, controllerUp);
+                if (isLoaded)
+                {
+                    //Check for unload triggers
+
+                    var shovelUp = shovelRotation * Vector3.up;
+
+                    //Cannot unload while inside pile
+                    var canUnload = !PileCollider.bounds.Contains(BladeTransform.position);
+
+                    if (canUnload)
+                    {
+                        //Shovel pointing downward
+                        if (Vector3.Angle(Vector3.up, shovelUp) >= 90)
+                        {
+                            UnloadBlade();
+                        }
+                    }
+                }
+                else
+                {
+                    //Check for load material collision
+
+                    var shouldLoad = PileCollider.bounds.Contains(BladeTransform.position);
+
+                    if (shouldLoad)
+                    {
+                        LoadBlade();
+                    }
+                }
             }
         }
         else
@@ -120,8 +220,8 @@ public class ShovelBehaviour : MonoBehaviour
             var leftHandPos = OVRInput.GetLocalControllerPosition(leftHand);
             var rightHandPos = OVRInput.GetLocalControllerPosition(rightHand);
 
-            var leftTouch = _collider.bounds.Contains(leftHandPos);
-            var rightTouch = _collider.bounds.Contains(rightHandPos);
+            var leftTouch = HiltCollider.bounds.Contains(leftHandPos);
+            var rightTouch = HiltCollider.bounds.Contains(rightHandPos);
 
             if (leftTouch)
             {
