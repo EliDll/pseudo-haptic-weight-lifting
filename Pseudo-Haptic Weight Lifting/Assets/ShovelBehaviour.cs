@@ -5,6 +5,7 @@ using System.Threading;
 using UnityEngine;
 #nullable enable
 
+
 public class ShovelBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
@@ -45,6 +46,26 @@ public class ShovelBehaviour : MonoBehaviour
 
     private Quaternion objInitRot;
     private Vector3 primaryInitPos;
+
+    private record VirtualControllerTransform
+    {
+        public Quaternion primaryRot;
+        public Quaternion secondaryRot;
+        public Vector3 primaryPos;
+        public Vector3 secondaryPos;
+    }
+
+    private VirtualControllerTransform? previous;
+
+    private Vector3 ScaleByCD(Vector3 input, CDRatio cd)
+    {
+        return new Vector3(x: input.x * cd.Horizontal, y: input.y * cd.Vertical, z: input.z * cd.Horizontal);
+    }
+
+    private Quaternion ScaleByCD(Quaternion input, CDRatio cd)
+    {
+        return Quaternion.Slerp(Quaternion.identity, input, cd.Rotational);
+    }
 
     private void Highlight()
     {
@@ -152,31 +173,76 @@ public class ShovelBehaviour : MonoBehaviour
                 {
                     //Continue grab interaction and update transform
 
-                    var primaryCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
-                    var secondaryCurrentPos = OVRInput.GetLocalControllerPosition(secondaryController.Value);
+                    //var primaryCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
+                    //var secondaryCurrentPos = OVRInput.GetLocalControllerPosition(secondaryController.Value);
 
-                    //var primaryControllerRotation = OVRInput.GetLocalControllerRotation(grabbingController.Value);
-                    var secondaryControllerRotation = OVRInput.GetLocalControllerRotation(secondaryController.Value);
+                    ////var primaryControllerRotation = OVRInput.GetLocalControllerRotation(grabbingController.Value);
+                    //var secondaryControllerRotation = OVRInput.GetLocalControllerRotation(secondaryController.Value);
 
-                    var controllerUp = secondaryControllerRotation * Vector3.up;
-                    var controllerDirection = secondaryCurrentPos - primaryCurrentPos;
+                    //var controllerUp = secondaryControllerRotation * Vector3.up;
+                    //var controllerDirection = secondaryCurrentPos - primaryCurrentPos;
 
-                    var betweenControllerRotation = Quaternion.LookRotation(controllerDirection, controllerUp);
+                    //var betweenControllerRotation = Quaternion.LookRotation(controllerDirection, controllerUp);
 
-                    var CD = isLoaded ? DM.LoadedCDRatio : DM.NormalCDRatio;
+                    //var CD = isLoaded ? DM.LoadedCDRatio : DM.NormalCDRatio;
 
-                    //Apply position diff during grab interaction with C/D
-                    var posDiff = primaryCurrentPos - primaryInitPos;
-                    var scaledPosDif = new Vector3(x: posDiff.x * CD.Horizontal, y: posDiff.y * CD.Vertical, z: posDiff.z * CD.Horizontal);
+                    ////Apply position diff during grab interaction with C/D
+                    //var posDiff = primaryCurrentPos - primaryInitPos;
+                    //var scaledPosDif = new Vector3(x: posDiff.x * CD.Horizontal, y: posDiff.y * CD.Vertical, z: posDiff.z * CD.Horizontal);
 
-                    obj.transform.position = primaryInitPos + scaledPosDif;
+                    //obj.transform.position = primaryInitPos + scaledPosDif;
 
-                    //Apply rotation diff during grab interaction with C/D
-                    var rotDiff = betweenControllerRotation * Quaternion.Inverse(objInitRot);
-                    var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD.Rotational);
+                    ////Apply rotation diff during grab interaction with C/D
+                    //var rotDiff = betweenControllerRotation * Quaternion.Inverse(objInitRot);
+                    //var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD.Rotational);
 
-                    var shovelRotation = scaledRotDiff * objInitRot;
-                    obj.transform.rotation = shovelRotation;
+                    //var shovelRotation = scaledRotDiff * objInitRot;
+                    //obj.transform.rotation = shovelRotation;
+
+                    var primaryCurrPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
+                    var secondaryCurrPos = OVRInput.GetLocalControllerPosition(secondaryController.Value);
+
+                    var primaryCurrRot = OVRInput.GetLocalControllerRotation(grabbingController.Value);
+                    var secondaryCurrRot = OVRInput.GetLocalControllerRotation(secondaryController.Value);
+
+                    if (previous != null)
+                    {
+                        var primaryPosDiff = primaryCurrPos - previous.primaryPos;
+                        var secondaryPosDiff = secondaryCurrPos - previous.secondaryPos;
+
+                        var primaryRotDiff = primaryCurrRot * Quaternion.Inverse(previous.primaryRot);
+                        var secondaryRotDiff = secondaryCurrRot * Quaternion.Inverse(previous.secondaryRot);
+
+                        var cd = isLoaded ? DM.LoadedCDRatio : DM.NormalCDRatio;
+
+                        var current = new VirtualControllerTransform
+                        {
+                            primaryPos = previous.primaryPos + ScaleByCD(primaryPosDiff, cd),
+                            secondaryPos = previous.secondaryPos + ScaleByCD(secondaryPosDiff, cd),
+                            primaryRot = ScaleByCD(primaryRotDiff, cd) * previous.primaryRot,
+                            secondaryRot = ScaleByCD(secondaryRotDiff, cd) * previous.secondaryRot,
+                        };
+
+                        var currentUp = current.secondaryRot * Vector3.up;
+                        var currentDirection = current.secondaryPos - current.primaryPos;
+                        var currentPose = Quaternion.LookRotation(currentDirection, currentUp);
+
+                        obj.transform.SetPositionAndRotation(current.primaryPos, currentPose);
+
+                        //Update virtual transform for next frame
+                        previous = current;
+                    }
+                    else
+                    {
+                        //Initialize from actual controller transform
+                        previous = new VirtualControllerTransform
+                        {
+                            primaryPos = primaryCurrPos,
+                            secondaryPos = secondaryCurrPos,
+                            primaryRot = primaryCurrRot,
+                            secondaryRot = secondaryCurrRot,
+                        };
+                    }
 
                     //Update shovel load
 
@@ -184,7 +250,7 @@ public class ShovelBehaviour : MonoBehaviour
                     {
                         //Check for unload triggers
 
-                        var shovelUp = shovelRotation * Vector3.up;
+                        var shovelUp = obj.transform.rotation * Vector3.up;
 
                         //Cannot unload while inside pile margion
                         var canUnload = !PileMarginCollider.bounds.Contains(BladeTransform.position);
