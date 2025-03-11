@@ -130,7 +130,7 @@ public class CubeBehaviour : MonoBehaviour
 
                         if (!colliding && ignoreCollision) ignoreCollision = false; //set flag to stop grab interaction on next collision as soon as object is unstuck
 
-                        var CD = DM.CDRatio;
+                        var CD = DM.NormalCDRatio;
 
                         //Apply position diff during grab interaction with C/D
                         var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);

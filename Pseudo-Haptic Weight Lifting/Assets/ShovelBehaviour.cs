@@ -43,6 +43,9 @@ public class ShovelBehaviour : MonoBehaviour
 
     private Rigidbody _rigidbody;
 
+    private Quaternion objInitRot;
+    private Vector3 primaryInitPos;
+
     private void Highlight()
     {
         if (!isHighlighted)
@@ -63,6 +66,9 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void StartGrabbing(OVRInput.Controller primary, OVRInput.Button button)
     {
+        primaryInitPos = OVRInput.GetLocalControllerPosition(primary);
+        objInitRot = obj.transform.rotation;
+
         _rigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
         HiltRenderer.material = DefaultHiltMaterial;
 
@@ -149,17 +155,27 @@ public class ShovelBehaviour : MonoBehaviour
                     var primaryCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
                     var secondaryCurrentPos = OVRInput.GetLocalControllerPosition(secondaryController.Value);
 
-                    obj.transform.position = primaryCurrentPos;
-
-                    var primaryControllerRotation = OVRInput.GetLocalControllerRotation(grabbingController.Value);
+                    //var primaryControllerRotation = OVRInput.GetLocalControllerRotation(grabbingController.Value);
                     var secondaryControllerRotation = OVRInput.GetLocalControllerRotation(secondaryController.Value);
 
                     var controllerUp = secondaryControllerRotation * Vector3.up;
-
                     var controllerDirection = secondaryCurrentPos - primaryCurrentPos;
 
-                    var shovelRotation = Quaternion.LookRotation(controllerDirection, controllerUp);
+                    var betweenControllerRotation = Quaternion.LookRotation(controllerDirection, controllerUp);
 
+                    var CD = isLoaded ? DM.LoadedCDRatio : DM.NormalCDRatio;
+
+                    //Apply position diff during grab interaction with C/D
+                    var posDiff = primaryCurrentPos - primaryInitPos;
+                    var scaledPosDif = new Vector3(x: posDiff.x * CD.Horizontal, y: posDiff.y * CD.Vertical, z: posDiff.z * CD.Horizontal);
+
+                    obj.transform.position = primaryInitPos + scaledPosDif;
+
+                    //Apply rotation diff during grab interaction with C/D
+                    var rotDiff = betweenControllerRotation * Quaternion.Inverse(objInitRot);
+                    var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD.Rotational);
+
+                    var shovelRotation = scaledRotDiff * objInitRot;
                     obj.transform.rotation = shovelRotation;
 
                     //Update shovel load

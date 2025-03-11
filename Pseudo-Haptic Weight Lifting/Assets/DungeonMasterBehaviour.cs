@@ -17,7 +17,14 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public GameObject LeftHandModel;
     public GameObject RightHandModel;
 
-    public CDRatio CDRatio = new CDRatio
+    public CDRatio NormalCDRatio = new CDRatio
+    {
+        Horizontal = 1.0f,
+        Vertical = 1.0f,
+        Rotational = 1.0f,
+    };
+
+    public CDRatio LoadedCDRatio = new CDRatio
     {
         Horizontal = 1.0f,
         Vertical = 1.0f,
@@ -87,11 +94,18 @@ public class DungeonMasterBehaviour : MonoBehaviour
     {
         currentCDIntensity = (currentCDIntensity + 1) % 3;
 
-        CDRatio = new CDRatio
+        NormalCDRatio = new CDRatio
         {
             Horizontal = 1.0f - (currentCDIntensity * 0.1f),
             Vertical = 1.0f - (currentCDIntensity * 0.15f),
             Rotational = 1.0f - (currentCDIntensity * 0.2f),
+        };
+
+        LoadedCDRatio = new CDRatio
+        {
+            Horizontal = 1.0f - (currentCDIntensity * 0.15f),
+            Vertical = 1.0f - (currentCDIntensity * 0.2f),
+            Rotational = 1.0f - (currentCDIntensity * 0.25f),
         };
 
         Vibrate(leftHand, time: 0.1f + currentCDIntensity * 0.5f);
@@ -100,7 +114,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        CDRatio = new CDRatio()
+        NormalCDRatio = new CDRatio()
         {
             Horizontal = 1.0f,
             Rotational = 1.0f,
