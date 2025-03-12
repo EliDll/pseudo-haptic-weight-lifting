@@ -3,19 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
-public record CDRatio
-{
-    public float Horizontal;
-    public float Vertical;
-    public float Rotational;
-}
-
-public record VirtualTransform
-{
-    public Vector3 pos;
-    public Quaternion rot;
-}
-
 public class DungeonMasterBehaviour : MonoBehaviour
 {
     public GameObject BasicTask;
@@ -52,43 +39,6 @@ public class DungeonMasterBehaviour : MonoBehaviour
     private bool handsVisible = false;
 
     private int currentCDIntensity = 0;
-
-    public VirtualTransform AddDiff(VirtualTransform current, VirtualTransform diff)
-    {
-        return new VirtualTransform
-        {
-            pos = current.pos + diff.pos,
-            rot = diff.rot * current.rot,
-        };
-    }
-
-    public VirtualTransform GetControllerTransform(OVRInput.Controller controller)
-    {
-        return new VirtualTransform
-        {
-            pos = OVRInput.GetLocalControllerPosition(controller),
-            rot = OVRInput.GetLocalControllerRotation(controller),
-        };
-    }
-
-    public VirtualTransform GetScaledDiff(VirtualTransform from, VirtualTransform to, CDRatio cd)
-    {
-        return new VirtualTransform
-        {
-            pos = ScaleByCD(to.pos - from.pos, cd),
-            rot = ScaleByCD(to.rot * Quaternion.Inverse(from.rot), cd),
-        };
-    }
-
-    public Vector3 ScaleByCD(Vector3 input, CDRatio cd)
-    {
-        return new Vector3(x: input.x * cd.Horizontal, y: input.y * cd.Vertical, z: input.z * cd.Horizontal);
-    }
-
-    public Quaternion ScaleByCD(Quaternion input, CDRatio cd)
-    {
-        return Quaternion.Slerp(Quaternion.identity, input, cd.Rotational);
-    }
 
     public void Vibrate(OVRInput.Controller? controller, float time = 0.1f)
     {
@@ -140,15 +90,15 @@ public class DungeonMasterBehaviour : MonoBehaviour
         NormalCDRatio = new CDRatio
         {
             Horizontal = 1.0f - (currentCDIntensity * 0.1f),
-            Vertical = 1.0f - (currentCDIntensity * 0.15f),
+            Vertical = 1.0f - (currentCDIntensity * 0.2f),
             Rotational = 1.0f - (currentCDIntensity * 0.2f),
         };
 
         LoadedCDRatio = new CDRatio
         {
-            Horizontal = NormalCDRatio.Horizontal - (currentCDIntensity * 0.1f),
-            Vertical = NormalCDRatio.Vertical - (currentCDIntensity * 0.15f),
-            Rotational = NormalCDRatio.Rotational, //Currently equal to normal, as rotational drift is unbearable
+            Horizontal = NormalCDRatio.Horizontal - (currentCDIntensity * 0.05f),
+            Vertical = NormalCDRatio.Vertical - (currentCDIntensity * 0.1f),
+            Rotational = NormalCDRatio.Rotational - (currentCDIntensity * 0.05f),
         };
 
         Vibrate(leftHand, time: 0.1f + currentCDIntensity * 0.5f);

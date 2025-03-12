@@ -33,14 +33,23 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller leftHand = OVRInput.Controller.LTouch;
     private OVRInput.Controller rightHand = OVRInput.Controller.RTouch;
 
-    private OVRInput.Button? grabbingButton = null;
-    private OVRInput.Controller? primaryController = null;
-    private OVRInput.Controller? secondaryController = null;
+    private OVRInput.Button? grabbingButton;
+    private OVRInput.Controller? primaryController;
+    private OVRInput.Controller? secondaryController;
 
-    private VirtualTransform? primaryControllerCurrent = null;
-    private VirtualTransform? secondaryControllerCurrent = null;
-    private VirtualTransform? primaryAnchorCurrent = null;
-    private VirtualTransform? secondaryAnchorCurrent = null;
+    private Vector3? currentPos;
+    private Vector3? grabOrigin;
+
+    private VirtualTransform? primaryCurrent;
+    private VirtualTransform? secondaryCurrent;
+    private VirtualTransform? primaryOrigin;
+    private VirtualTransform? secondaryOrigin;
+    private VirtualTransform? shovelCurrent;
+
+    private VirtualTransform? primaryControllerCurrent;
+    private VirtualTransform? secondaryControllerCurrent;
+    private VirtualTransform? primaryAnchorCurrent;
+    private VirtualTransform? secondaryAnchorCurrent;
 
     private Rigidbody _shovelRigidbody;
 
@@ -52,7 +61,8 @@ public class ShovelBehaviour : MonoBehaviour
     private Collider _pileBoundaryCollider;
     private Collider _shovelBoundaryCollider;
 
-
+    private float shovelMomentum = 0.0f;
+    private const float SPEEDUP_PER_FRAME = 0.01f;
 
     // Start is called before the first frame update
     void Start()
@@ -100,33 +110,75 @@ public class ShovelBehaviour : MonoBehaviour
 
         primaryController = primary;
         secondaryController = secondary;
-        primaryControllerCurrent = DM.GetControllerTransform(primary);
-        secondaryControllerCurrent = DM.GetControllerTransform(secondary);
+        primaryControllerCurrent = Calc.GetControllerTransform(primary);
+        secondaryControllerCurrent = Calc.GetControllerTransform(secondary);
 
         //Initialize anchors to controller transforms
         primaryAnchorCurrent = primaryControllerCurrent;
         secondaryAnchorCurrent = secondaryControllerCurrent;
 
+        primaryOrigin = Calc.GetControllerTransform(primary);
+        secondaryOrigin = Calc.GetControllerTransform(secondary);
+
+        shovelCurrent = GetShovelTargetFromAnchors(primaryOrigin, secondaryOrigin);
+        Shovel.transform.SetPositionAndRotation(shovelCurrent.pos, shovelCurrent.rot);
+
         DM.Vibrate(primaryController);
     }
 
-    private void MoveShovel(OVRInput.Controller primary, OVRInput.Controller secondary)
+    private static VirtualTransform GetShovelTargetFromAnchors(VirtualTransform primary, VirtualTransform secondary)
     {
-        //Continue grab interaction and update transforms
+        var shovelPos = primary.pos; //shovel pos origin is hilt, i.e. equal to primary anchor
+        var shovelUp = secondary.rot * Vector3.up; //Currently, shovel up is only determined by secondary anchor rotation
+        var shovelDirection = secondary.pos - primary.pos; //Shovel direction is vector between anchors
+        var shovelRotation = Quaternion.LookRotation(shovelDirection, shovelUp);
 
-        var primaryControllerNext = DM.GetControllerTransform(primary);
-        var secondaryControllerNext = DM.GetControllerTransform(secondary);
+        return new VirtualTransform { pos = shovelPos, rot = shovelRotation };
+    }
+
+    private void MoveIsomorphic(OVRInput.Controller primary, OVRInput.Controller secondary)
+    {
+        var primaryController = Calc.GetControllerTransform(primary);
+        var secondaryController = Calc.GetControllerTransform(secondary);
+
+        if(primaryOrigin != null && secondaryOrigin != null && shovelCurrent != null && grabOrigin != null)
+        {
+            var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
+
+            currentPos = Calc.Interpolate(grabOrigin, primaryController.pos, cd);
+
+            primaryCurrent = Calc.Interpolate(from: primaryOrigin, to: primaryController, cd);
+            secondaryCurrent = Calc.AddDiff(primaryCurrent, Calc.Interpolate(from: primaryController, to: secondaryController, cd));
+
+            //Apply new anchor transforms to objects
+            PrimaryAnchor.transform.SetPositionAndRotation(primaryCurrent.pos, primaryCurrent.rot);
+            SecondaryAnchor.transform.SetPositionAndRotation(secondaryCurrent.pos, secondaryCurrent.rot);
+
+            var shovelTarget = GetShovelTargetFromAnchors(primary: primaryCurrent, secondary: secondaryCurrent);
+
+            if (shovelMomentum < 1.0f) shovelMomentum = Math.Min(shovelMomentum + SPEEDUP_PER_FRAME, 1.0f);
+            shovelCurrent = Calc.Interpolate(from: shovelCurrent, to: shovelTarget, fraction: shovelMomentum);
+
+            //Apply new shovel transform to object
+            Shovel.transform.SetPositionAndRotation(shovelCurrent.pos, shovelCurrent.rot);
+        }
+    }
+
+    private void MoveDifferential(OVRInput.Controller primary, OVRInput.Controller secondary)
+    {
+        var primaryControllerNext = Calc.GetControllerTransform(primary);
+        var secondaryControllerNext = Calc.GetControllerTransform(secondary);
 
         if (primaryControllerCurrent != null && secondaryControllerCurrent != null && primaryAnchorCurrent != null && secondaryAnchorCurrent != null)
         {
             //Determine the controller diff in this frame, scaled by CD
             var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
-            var primaryDiff = DM.GetScaledDiff(from: primaryControllerCurrent, to: primaryControllerNext, cd);
-            var secondaryDiff = DM.GetScaledDiff(from: secondaryControllerCurrent, to: secondaryControllerNext, cd);
+            var primaryDiff = Calc.GetScaledDiff(from: primaryControllerCurrent, to: primaryControllerNext, cd);
+            var secondaryDiff = Calc.GetScaledDiff(from: secondaryControllerCurrent, to: secondaryControllerNext, cd);
 
-            //Add controller diff to anchors
-            var primaryAnchorNext = DM.AddDiff(current: primaryAnchorCurrent, diff: primaryDiff);
-            var secondaryAnchorNext = DM.AddDiff(current: secondaryAnchorCurrent, diff: secondaryDiff);
+            //Add scaled diff to anchors
+            var primaryAnchorNext = Calc.AddDiff(current: primaryAnchorCurrent, diff: primaryDiff);
+            var secondaryAnchorNext = Calc.AddDiff(current: secondaryAnchorCurrent, diff: secondaryDiff);
 
             //Determine shovel transform from anchors
             var nextShovelPos = primaryAnchorNext.pos; //shovel pos origin is hilt, i.e. equal to primary anchor
@@ -165,6 +217,8 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void LoadBlade()
     {
+        shovelMomentum = 0.0f;
+
         DM.Vibrate(primaryController);
         DM.Vibrate(secondaryController);
 
@@ -188,6 +242,8 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void UnloadBlade()
     {
+        shovelMomentum = 0.0f;
+
         DM.Vibrate(primaryController);
         DM.Vibrate(secondaryController);
 
@@ -220,7 +276,11 @@ public class ShovelBehaviour : MonoBehaviour
             else
             {
                 //Move shovel
-                if (primaryController != null && secondaryController != null) MoveShovel(primaryController.Value, secondaryController.Value);
+                if (primaryController != null && secondaryController != null)
+                {
+                    //MoveDifferential(primary: primaryController.Value, secondary: secondaryController.Value);
+                    MoveIsomorphic(primary: primaryController.Value, secondary: secondaryController.Value);
+                }
 
                 //Update shovel load state
                 if (_shovelLoadRenderer.enabled)
