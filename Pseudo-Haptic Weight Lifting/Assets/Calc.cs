@@ -1,5 +1,6 @@
 ﻿using UnityEditor;
 using UnityEngine;
+#nullable enable
 
 public record CDRatio
 {
@@ -40,7 +41,7 @@ public static class Calc
         };
     }
 
-    public static Vector3 Interpolate(Vector3 from, Vector3 to, CDRatio cd)
+    public static Vector3 InterpolateByCD(Vector3 from, Vector3 to, CDRatio cd)
     {
         var diff = to - from;
         var scaledDiff = Vector3.Scale(diff, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal));
@@ -60,7 +61,7 @@ public static class Calc
 
     public static VirtualTransform GetScaledDiff(VirtualTransform from, VirtualTransform to, float ratio) => ScaleBy(GetDiff(from, to), ratio);
 
-    private static VirtualTransform GetDiff(VirtualTransform from, VirtualTransform to) => new VirtualTransform
+    public static VirtualTransform GetDiff(VirtualTransform from, VirtualTransform to) => new VirtualTransform
     {
         pos = to.pos - from.pos,
         rot = to.rot * Quaternion.Inverse(from.rot),
@@ -77,4 +78,6 @@ public static class Calc
         pos = Vector3.Scale(input.pos, new Vector3(ratio, ratio, ratio)),
         rot = Quaternion.Slerp(Quaternion.identity, input.rot, ratio)
     };
+
+    public static Vector3 ScaleByCD(Vector3 input, CDRatio cd) => Vector3.Scale(input, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal));
 }
