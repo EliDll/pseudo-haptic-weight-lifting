@@ -111,6 +111,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
         pressedButton = null;
         BasicTask.SetActive(false);
         ShovellingTask.SetActive(false);
+        LeftHandModel.SetActive(false);
+        RightHandModel.SetActive(false);
     }
 
     // Update is called once per frame

@@ -37,13 +37,7 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller? primaryController;
     private OVRInput.Controller? secondaryController;
 
-    private VirtualTransform? shovelOrigin;
-    private VirtualTransform? shovelTarget;
-
-    private VirtualTransform? controllersCurrent;
-
-    private VirtualTransform? primaryCurrent;
-    private VirtualTransform? secondaryCurrent;
+    private LRTransform? shovelOrigin;
 
     private Rigidbody _shovelRigidbody;
 
@@ -55,8 +49,12 @@ public class ShovelBehaviour : MonoBehaviour
     private Collider _pileBoundaryCollider;
     private Collider _shovelBoundaryCollider;
 
-    private float shovelMomentum = 0.0f;
-    private const float SPEEDUP_PER_FRAME = 0.01f;
+    private const float MIN_ANGLE_DEG = 0.5f;
+    private float nextMaxAngle = MIN_ANGLE_DEG;
+
+    private const float MIN_DISTANCE_M = 0.005f;
+    private float nextMaxDistance = MIN_DISTANCE_M;
+    
 
     // Start is called before the first frame update
     void Start()
@@ -91,23 +89,11 @@ public class ShovelBehaviour : MonoBehaviour
         if (_shovelBoundaryRenderer.enabled) _shovelBoundaryRenderer.enabled = false;
     }
 
-    private static VirtualTransform GetTwohandedControllerPose(OVRInput.Controller primary, OVRInput.Controller secondary)
-    {
-        var primaryCurrent = Calc.GetControllerTransform(primary);
-        var secondaryCurrent = Calc.GetControllerTransform(secondary);
-
-        var controllersForward = Vector3.Normalize(secondaryCurrent.pos - primaryCurrent.pos);
-        var controllersUp = Vector3.Slerp(primaryCurrent.rot * Vector3.up, secondaryCurrent.rot * Vector3.up, 0.5f);
-
-        return new VirtualTransform
-        {
-            pos = primaryCurrent.pos,
-            rot = Quaternion.LookRotation(controllersForward, controllersUp)
-        };
-    }
-
     private void StartGrabbing(OVRInput.Controller primary, OVRInput.Button button)
     {
+        nextMaxDistance = MIN_DISTANCE_M;
+        nextMaxAngle = MIN_ANGLE_DEG;
+
         Unhighlight();
 
         PrimaryAnchor.SetActive(true);
@@ -123,109 +109,65 @@ public class ShovelBehaviour : MonoBehaviour
         primaryController = primary;
         secondaryController = secondary;
 
-        controllersCurrent = GetTwohandedControllerPose(primary, secondary);
-        shovelOrigin = controllersCurrent;
-        shovelTarget = controllersCurrent;
+        shovelOrigin = new LRTransform
+        {
+            pos = Shovel.transform.position,
+            forward = Shovel.transform.rotation * Vector3.forward,
+            up = Shovel.transform.rotation * Vector3.up
+        };
 
         DM.Vibrate(primaryController);
     }
 
-    //private static VirtualTransform GetShovelTargetFromAnchors(VirtualTransform primary, VirtualTransform secondary)
-    //{
-    //    var shovelPos = primary.pos; //shovel pos origin is hilt, i.e. equal to primary anchor
-    //    var shovelUp = secondary.rot * Vector3.up; //Currently, shovel up is only determined by secondary anchor rotation
-    //    var shovelDirection = secondary.pos - primary.pos; //Shovel direction is vector between anchors
-    //    var shovelRotation = Quaternion.LookRotation(shovelDirection, shovelUp);
-
-    //    return new VirtualTransform { pos = shovelPos, rot = shovelRotation };
-    //}
-
-    private void MoveIsomorphic(OVRInput.Controller primary, OVRInput.Controller secondary)
+    private static LRTransform GetTwohandedControllerPose(OVRInput.Controller primary, OVRInput.Controller secondary)
     {
-        if (shovelTarget != null && controllersCurrent != null)
+        var primaryPos = OVRInput.GetLocalControllerPosition(primary);
+        var primaryRot = OVRInput.GetLocalControllerRotation(primary);
+        var secondaryPos = OVRInput.GetLocalControllerPosition(secondary);
+        var secondaryRot = OVRInput.GetLocalControllerRotation(secondary);
+
+        return new LRTransform
         {
-            var controllersNext = GetTwohandedControllerPose(primary, secondary);
-
-            var controllersPosDiff = controllersNext.pos - controllersCurrent.pos;
-            var controllersRotDiff = controllersNext.rot * Quaternion.Inverse(controllersCurrent.rot);
-
-            controllersCurrent = controllersNext;
-
-            //var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
-
-            //shovelTarget = new VirtualTransform
-            //{
-            //    pos = shovelTarget.pos + Calc.ScaleByCD(controllersPosDiff, cd),
-            //    rot = Quaternion.Slerp(shovelTarget.rot, controllersRotDiff * shovelTarget.rot, cd.Rotational),
-            //};
-            UpdateShovelTargetFromOrigin();
-
-            PrimaryAnchor.transform.position = shovelTarget.pos;
-            SecondaryAnchor.transform.position = PrimaryAnchor.transform.position + shovelTarget.rot * Vector3.forward * 0.3f;
-            TernaryAnchor.transform.position = SecondaryAnchor.transform.position + shovelTarget.rot * Vector3.up * 0.1f;
-
-            if (shovelMomentum < 1.0f) shovelMomentum = Math.Min(shovelMomentum + SPEEDUP_PER_FRAME, 1.0f);
-
-            var nextShovelPosition = Vector3.Lerp(Shovel.transform.position, shovelTarget.pos, shovelMomentum);
-            var nextShovelRotation = Quaternion.Slerp(Shovel.transform.rotation, shovelTarget.rot, shovelMomentum);
-
-            Shovel.transform.SetPositionAndRotation(nextShovelPosition, nextShovelRotation);
-        }
+            pos = primaryPos,
+            forward = Vector3.Normalize(secondaryPos - primaryPos),
+            up = Vector3.Slerp(primaryRot * Vector3.up, secondaryRot * Vector3.up, 0.5f)
+        };
     }
 
-    //private void MoveDifferential(OVRInput.Controller primary, OVRInput.Controller secondary)
-    //{
-    //    var primaryControllerNext = Calc.GetControllerTransform(primary);
-    //    var secondaryControllerNext = Calc.GetControllerTransform(secondary);
-
-    //    if (primaryControllerCurrent != null && secondaryControllerCurrent != null && primaryAnchorCurrent != null && secondaryAnchorCurrent != null)
-    //    {
-    //        //Determine the controller diff in this frame, scaled by CD
-    //        var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
-    //        var primaryDiff = Calc.GetScaledDiff(from: primaryControllerCurrent, to: primaryControllerNext, cd);
-    //        var secondaryDiff = Calc.GetScaledDiff(from: secondaryControllerCurrent, to: secondaryControllerNext, cd);
-
-    //        //Add scaled diff to anchors
-    //        var primaryAnchorNext = Calc.AddDiff(current: primaryAnchorCurrent, diff: primaryDiff);
-    //        var secondaryAnchorNext = Calc.AddDiff(current: secondaryAnchorCurrent, diff: secondaryDiff);
-
-    //        //Determine shovel transform from anchors
-    //        var nextShovelPos = primaryAnchorNext.pos; //shovel pos origin is hilt, i.e. equal to primary anchor
-    //        var nextShovelUp = secondaryAnchorNext.rot * Vector3.up; //Currently, shovel up is only determined by secondary anchor rotation
-    //        var nextShovelDirection = secondaryAnchorNext.pos - primaryAnchorNext.pos; //Shovel direction is vector between anchors
-    //        var nextShovelRotation = Quaternion.LookRotation(nextShovelDirection, nextShovelUp);
-
-    //        //Apply new shovel transform to object
-    //        Shovel.transform.SetPositionAndRotation(nextShovelPos, nextShovelRotation);
-
-    //        //Apply new anchor transforms to objects
-    //        PrimaryAnchor.transform.SetPositionAndRotation(primaryAnchorNext.pos, primaryAnchorNext.rot);
-    //        SecondaryAnchor.transform.SetPositionAndRotation(secondaryAnchorNext.pos, secondaryAnchorNext.rot);
-
-    //        //Update virtual transforms
-    //        primaryControllerCurrent = primaryControllerNext;
-    //        secondaryControllerCurrent = secondaryControllerNext;
-    //        primaryAnchorCurrent = primaryAnchorNext;
-    //        secondaryAnchorCurrent = secondaryAnchorNext;
-    //    }
-    //}
-
-    private void UpdateShovelTargetFromOrigin()
+    private static LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd)
     {
-        if(shovelOrigin != null && controllersCurrent != null)
+        return new LRTransform
         {
-            var posDiff = controllersCurrent.pos - shovelOrigin.pos;
-            var rotDiff =  controllersCurrent.rot * Quaternion.Inverse(shovelOrigin.rot);
+            pos = origin.pos + Vector3.Scale(controllers.pos - origin.pos, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
+            forward = Vector3.Slerp(origin.forward, controllers.forward, cd.Rotational),
+            up = Vector3.Slerp(origin.up, controllers.up, cd.Rotational)
+        };
+    }
+
+    private void MoveFrame(OVRInput.Controller primary, OVRInput.Controller secondary)
+    {
+        if(shovelOrigin != null)
+        {
+            var controllers = GetTwohandedControllerPose(primary: primary, secondary: secondary);
 
             var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
 
-            shovelTarget = new VirtualTransform
-            {
-                pos = shovelOrigin.pos + Calc.ScaleByCD(posDiff, cd),
-                rot = Quaternion.Slerp(shovelOrigin.rot, rotDiff * shovelOrigin.rot, cd.Rotational),
-            };
+            var target = GetShovelTarget(origin: shovelOrigin, controllers: controllers, cd: cd);
+            var targetRot = Quaternion.LookRotation(target.forward, target.up);
 
+            PrimaryAnchor.transform.position = target.pos + shovelOrigin.forward * 0.4f;
+            SecondaryAnchor.transform.position = target.pos + targetRot  * Vector3.forward * 0.4f;
+            TernaryAnchor.transform.position = target.pos + target.forward * 0.4f;
+
+            var nextPos = Vector3.MoveTowards(Shovel.transform.position, target.pos, nextMaxDistance);
+            nextMaxDistance += MIN_DISTANCE_M;
+
+            var nextRot = Quaternion.RotateTowards(Shovel.transform.rotation, targetRot, nextMaxAngle);
+            nextMaxAngle += MIN_ANGLE_DEG;
+
+            Shovel.transform.SetPositionAndRotation(nextPos, nextRot);
         }
+            
     }
 
     private void StopGrabbing()
@@ -245,6 +187,9 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void LoadBlade()
     {
+        nextMaxDistance = MIN_DISTANCE_M;
+        nextMaxAngle = MIN_ANGLE_DEG;
+
         _shovelLoadRenderer.enabled = true;
 
         DM.Vibrate(primaryController);
@@ -264,13 +209,13 @@ public class ShovelBehaviour : MonoBehaviour
 
         Pile.transform.localScale = nextPileScale;
         Pile.transform.position = nextPilePos;
-
-        shovelMomentum = 0.0f;
-        UpdateShovelTargetFromOrigin();
     }
 
     private void UnloadBlade()
     {
+        nextMaxDistance = MIN_DISTANCE_M;
+        nextMaxAngle = MIN_ANGLE_DEG;
+
         _shovelLoadRenderer.enabled = false;
 
         DM.Vibrate(primaryController);
@@ -286,9 +231,6 @@ public class ShovelBehaviour : MonoBehaviour
             _pileBoundaryRenderer.material = ActiveMaterial;
             Pile.SetActive(false);
         }
-
-        shovelMomentum = 0.0f;
-        UpdateShovelTargetFromOrigin();
     }
 
     // Update is called once per frame
@@ -308,8 +250,7 @@ public class ShovelBehaviour : MonoBehaviour
                 //Move shovel
                 if (primaryController != null && secondaryController != null)
                 {
-                    //MoveDifferential(primary: primaryController.Value, secondary: secondaryController.Value);
-                    MoveIsomorphic(primary: primaryController.Value, secondary: secondaryController.Value);
+                    MoveFrame(primary: primaryController.Value, secondary: secondaryController.Value);
                 }
 
                 //Update shovel load state

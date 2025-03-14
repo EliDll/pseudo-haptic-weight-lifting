@@ -15,6 +15,13 @@ public record VirtualTransform
     public Quaternion rot;
 }
 
+public record LRTransform
+{
+    public Vector3 pos;
+    public Vector3 forward;
+    public Vector3 up;
+}
+
 public static class Calc
 {
     public static VirtualTransform AddDiff(VirtualTransform current, VirtualTransform diff) => new VirtualTransform
