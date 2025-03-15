@@ -6042,6 +6042,18 @@ MonoBehaviour:
   installationRoutineCheckpoint:
     _installationRoutineId: 
     _installationVariants: []
+--- !u!114 &1012653693 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2483171112407822892, guid: f54012181eacade4ea242c65f804720f,
+    type: 3}
+  m_PrefabInstance: {fileID: 671721459}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1012653688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: df9f338034892c44ebb62d97894772f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1015236165
 GameObject:
   m_ObjectHideFlags: 0
@@ -6336,7 +6348,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1042631063
 Transform:
   m_ObjectHideFlags: 0
@@ -12371,6 +12383,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   DM: {fileID: 881892186}
+  CameraRig: {fileID: 1012653693}
   Parent: {fileID: 2100213796}
   Shovel: {fileID: 2015771805}
   ShovelLoad: {fileID: 6900973}

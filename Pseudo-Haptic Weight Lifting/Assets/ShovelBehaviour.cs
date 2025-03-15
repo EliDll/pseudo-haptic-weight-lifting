@@ -9,6 +9,8 @@ public class ShovelBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
 
+    public OVRCameraRig CameraRig;
+
     public GameObject Parent;
 
     public GameObject Shovel;
@@ -38,6 +40,8 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller? secondaryController;
 
     private LRTransform? origin;
+
+    private Vector3 initCameraPos;
 
     private Rigidbody _shovelRigidbody;
 
@@ -117,6 +121,8 @@ public class ShovelBehaviour : MonoBehaviour
             up = Shovel.transform.rotation * Vector3.up
         };
 
+        initCameraPos = CameraRig.centerEyeAnchor.position;
+
         DM.Vibrate(primaryController);
     }
 
@@ -135,16 +141,22 @@ public class ShovelBehaviour : MonoBehaviour
         };
     }
 
-    private static LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd, float controllerDist)
+    private LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd, float controllerDist)
     {
         var scaledControllerDist = controllerDist * cd.Horizontal;
         var leverageFraction = scaledControllerDist / FULL_LEVERAGE_M;
 
         var leverCD = cd.Rotational == 1.0f ? cd.Rotational : leverageFraction * cd.Rotational; //Only scale when cd ratio is not none (1)
 
+        var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - initCameraPos;
+        var cameraPosDiffHorizontal = new Vector3(x: cameraPosDiff.x, y: 0, z: cameraPosDiff.z);
+
+        var movedOriginPos = origin.pos + cameraPosDiffHorizontal;
+        var controllerPosDiff = controllers.pos - movedOriginPos;
+
         return new LRTransform
         {
-            pos = origin.pos + Vector3.Scale(controllers.pos - origin.pos, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
+            pos = movedOriginPos + Vector3.Scale(controllerPosDiff, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
             forward = Vector3.Slerp(origin.forward, controllers.forward, leverCD),
             up = Vector3.Slerp(origin.up, controllers.up, cd.Rotational)
         };
