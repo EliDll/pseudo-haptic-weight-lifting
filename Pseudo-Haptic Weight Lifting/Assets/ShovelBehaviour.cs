@@ -37,7 +37,7 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller? primaryController;
     private OVRInput.Controller? secondaryController;
 
-    private LRTransform? shovelOrigin;
+    private LRTransform? origin;
 
     private Rigidbody _shovelRigidbody;
 
@@ -49,12 +49,13 @@ public class ShovelBehaviour : MonoBehaviour
     private Collider _pileBoundaryCollider;
     private Collider _shovelBoundaryCollider;
 
-    private const float MIN_ANGLE_DEG = 0.5f;
+    private const float MIN_ANGLE_DEG = 0.1f;
     private float nextMaxAngle = MIN_ANGLE_DEG;
 
-    private const float MIN_DISTANCE_M = 0.005f;
+    private const float MIN_DISTANCE_M = 0.001f;
     private float nextMaxDistance = MIN_DISTANCE_M;
-    
+
+    private const float FULL_LEVERAGE_M = 0.5f;
 
     // Start is called before the first frame update
     void Start()
@@ -109,7 +110,7 @@ public class ShovelBehaviour : MonoBehaviour
         primaryController = primary;
         secondaryController = secondary;
 
-        shovelOrigin = new LRTransform
+        origin = new LRTransform
         {
             pos = Shovel.transform.position,
             forward = Shovel.transform.rotation * Vector3.forward,
@@ -134,30 +135,39 @@ public class ShovelBehaviour : MonoBehaviour
         };
     }
 
-    private static LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd)
+    private static LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd, float controllerDist)
     {
+        var scaledControllerDist = controllerDist * cd.Horizontal;
+        var leverageFraction = scaledControllerDist / FULL_LEVERAGE_M;
+
+        var leverCD = cd.Rotational == 1.0f ? cd.Rotational : leverageFraction * cd.Rotational; //Only scale when cd ratio is not none (1)
+
         return new LRTransform
         {
             pos = origin.pos + Vector3.Scale(controllers.pos - origin.pos, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
-            forward = Vector3.Slerp(origin.forward, controllers.forward, cd.Rotational),
+            forward = Vector3.Slerp(origin.forward, controllers.forward, leverCD),
             up = Vector3.Slerp(origin.up, controllers.up, cd.Rotational)
         };
     }
 
     private void MoveFrame(OVRInput.Controller primary, OVRInput.Controller secondary)
     {
-        if(shovelOrigin != null)
+        if(origin != null)
         {
             var controllers = GetTwohandedControllerPose(primary: primary, secondary: secondary);
 
             var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
 
-            var target = GetShovelTarget(origin: shovelOrigin, controllers: controllers, cd: cd);
+            var primaryPos = OVRInput.GetLocalControllerPosition(primary);
+            var secondaryPos = OVRInput.GetLocalControllerPosition(secondary);
+            var controllerDist = Vector3.Magnitude(secondaryPos - primaryPos);
+
+            var target = GetShovelTarget(origin: origin, controllers: controllers, cd: cd, controllerDist: controllerDist);
             var targetRot = Quaternion.LookRotation(target.forward, target.up);
 
-            PrimaryAnchor.transform.position = target.pos + shovelOrigin.forward * 0.4f;
-            SecondaryAnchor.transform.position = target.pos + targetRot  * Vector3.forward * 0.4f;
-            TernaryAnchor.transform.position = target.pos + target.forward * 0.4f;
+            PrimaryAnchor.transform.position = target.pos + origin.forward * controllerDist;
+            SecondaryAnchor.transform.position = target.pos + controllers.forward * controllerDist;
+            TernaryAnchor.transform.position = target.pos + target.forward * controllerDist;
 
             var nextPos = Vector3.MoveTowards(Shovel.transform.position, target.pos, nextMaxDistance);
             nextMaxDistance += MIN_DISTANCE_M;

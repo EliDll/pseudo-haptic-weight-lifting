@@ -3,6 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
+public enum CDIntensity{
+    None,
+    Subtle,
+    Pronounced
+}
+
 public class DungeonMasterBehaviour : MonoBehaviour
 {
     public GameObject BasicTask;
@@ -38,7 +44,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private bool handsVisible = false;
 
-    private int currentCDIntensity = 0;
+    private CDIntensity currentIntensity = CDIntensity.None;
 
     public void Vibrate(OVRInput.Controller? controller, float time = 0.1f)
     {
@@ -85,23 +91,69 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private void ChangeCDRatio()
     {
-        currentCDIntensity = (currentCDIntensity + 1) % 3;
-
-        NormalCDRatio = new CDRatio
+        currentIntensity = currentIntensity switch
         {
-            Horizontal = 1.0f - (currentCDIntensity * 0.1f),
-            Vertical = 1.0f - (currentCDIntensity * 0.2f),
-            Rotational = 1.0f - (currentCDIntensity * 0.2f),
+            CDIntensity.None => CDIntensity.Subtle,
+            CDIntensity.Subtle => CDIntensity.Pronounced,
+            CDIntensity.Pronounced => CDIntensity.None,
+            _ => throw new System.NotImplementedException(),
         };
 
-        LoadedCDRatio = new CDRatio
+        NormalCDRatio = currentIntensity switch
         {
-            Horizontal = NormalCDRatio.Horizontal - (currentCDIntensity * 0.05f),
-            Vertical = NormalCDRatio.Vertical - (currentCDIntensity * 0.1f),
-            Rotational = NormalCDRatio.Rotational - (currentCDIntensity * 0.05f),
+            CDIntensity.None => new CDRatio
+            {
+                Horizontal = 1.0f,
+                Vertical = 1.0f,
+                Rotational = 1.0f
+            },
+            CDIntensity.Subtle => new CDRatio
+            {
+                Horizontal = 0.9f,
+                Vertical = 0.8f,
+                Rotational = 0.9f
+            },
+            CDIntensity.Pronounced => new CDRatio
+            {
+                Horizontal = 0.8f,
+                Vertical = 0.7f,
+                Rotational = 0.8f
+            },
+            _ => throw new System.NotImplementedException()
         };
 
-        Vibrate(leftHand, time: 0.1f + currentCDIntensity * 0.5f);
+        LoadedCDRatio = currentIntensity switch
+        {
+            CDIntensity.None => new CDRatio
+            {
+                Horizontal = 1.0f,
+                Vertical = 1.0f,
+                Rotational = 1.0f
+            },
+            CDIntensity.Subtle => new CDRatio
+            {
+                Horizontal = 0.85f,
+                Vertical = 0.75f,
+                Rotational = 0.85f
+            },
+            CDIntensity.Pronounced => new CDRatio
+            {
+                Horizontal = 0.7f,
+                Vertical = 0.6f,
+                Rotational = 0.7f
+            },
+            _ => throw new System.NotImplementedException()
+        };
+
+        var vibrateDuration = currentIntensity switch
+        {
+            CDIntensity.None => 0.1f,
+            CDIntensity.Subtle => 0.5f,
+            CDIntensity.Pronounced => 1.0f,
+            _ => throw new System.NotImplementedException(),
+        };
+
+        Vibrate(leftHand, time: vibrateDuration);
     }
 
     // Start is called before the first frame update
