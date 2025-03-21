@@ -2,11 +2,23 @@
 using UnityEngine;
 #nullable enable
 
-public record CDRatio
+public record CDParams
 {
-    public float Horizontal;
-    public float Vertical;
-    public float Rotational;
+    public float HorizontalRatio;
+    public float VerticalRatio;
+    public float RotationalRatio;
+    /// <summary>
+    /// m/s^2
+    /// </summary>
+    public float Acceleration;
+    /// <summary>
+    /// deg/s^2
+    /// </summary>
+    public float SpinAcceleration;
+    /// <summary>
+    /// deg/s^2
+    /// </summary>
+    public float TwistAcceleration;
 }
 
 public record VirtualTransform
@@ -36,22 +48,22 @@ public static class Calc
         rot = OVRInput.GetLocalControllerRotation(controller),
     };
 
-    public static VirtualTransform Interpolate(VirtualTransform from, VirtualTransform to, CDRatio cd)
+    public static VirtualTransform Interpolate(VirtualTransform from, VirtualTransform to, CDParams cd)
     {
         var posDiff = to.pos - from.pos;
-        var scaledPosDiff = Vector3.Scale(posDiff, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal));
+        var scaledPosDiff = Vector3.Scale(posDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
 
         return new VirtualTransform
         {
             pos = from.pos + scaledPosDiff,
-            rot = Quaternion.Slerp(from.rot, to.rot, cd.Rotational),
+            rot = Quaternion.Slerp(from.rot, to.rot, cd.RotationalRatio),
         };
     }
 
-    public static Vector3 InterpolateByCD(Vector3 from, Vector3 to, CDRatio cd)
+    public static Vector3 InterpolateByCD(Vector3 from, Vector3 to, CDParams cd)
     {
         var diff = to - from;
-        var scaledDiff = Vector3.Scale(diff, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal));
+        var scaledDiff = Vector3.Scale(diff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
         return from + scaledDiff;
     }
 
@@ -64,7 +76,7 @@ public static class Calc
         };
     }
 
-    public static VirtualTransform GetScaledDiff(VirtualTransform from, VirtualTransform to, CDRatio cd) => ScaleBy(GetDiff(from, to), cd);
+    public static VirtualTransform GetScaledDiff(VirtualTransform from, VirtualTransform to, CDParams cd) => ScaleBy(GetDiff(from, to), cd);
 
     public static VirtualTransform GetScaledDiff(VirtualTransform from, VirtualTransform to, float ratio) => ScaleBy(GetDiff(from, to), ratio);
 
@@ -74,10 +86,10 @@ public static class Calc
         rot = to.rot * Quaternion.Inverse(from.rot),
     };
 
-    private static VirtualTransform ScaleBy(VirtualTransform input, CDRatio cd) => new VirtualTransform
+    private static VirtualTransform ScaleBy(VirtualTransform input, CDParams cd) => new VirtualTransform
     {
-        pos = Vector3.Scale(input.pos, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
-        rot = Quaternion.Slerp(Quaternion.identity, input.rot, cd.Rotational)
+        pos = Vector3.Scale(input.pos, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio)),
+        rot = Quaternion.Slerp(Quaternion.identity, input.rot, cd.RotationalRatio)
     };
 
     private static VirtualTransform ScaleBy(VirtualTransform input, float ratio) => new VirtualTransform
@@ -86,5 +98,5 @@ public static class Calc
         rot = Quaternion.Slerp(Quaternion.identity, input.rot, ratio)
     };
 
-    public static Vector3 ScaleByCD(Vector3 input, CDRatio cd) => Vector3.Scale(input, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal));
+    public static Vector3 ScaleByCD(Vector3 input, CDParams cd) => Vector3.Scale(input, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
 }

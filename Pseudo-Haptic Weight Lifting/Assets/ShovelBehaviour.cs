@@ -1,9 +1,26 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
 #nullable enable
+
+public record ShovelVelocity
+{
+    /// <summary>
+    /// m/s
+    /// </summary>
+    public float hilt;
+    /// <summary>
+    /// m/s
+    /// </summary>
+    public float blade;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float spin;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float twist;
+}
 
 public class ShovelBehaviour : MonoBehaviour
 {
@@ -23,9 +40,13 @@ public class ShovelBehaviour : MonoBehaviour
     public GameObject Pile;
     public GameObject PileBoundary;
 
-    public GameObject PrimaryAnchor;
-    public GameObject SecondaryAnchor;
-    public GameObject TernaryAnchor;
+    public GameObject PrimaryHand;
+    public GameObject SecondaryHand;
+
+    public GameObject DebugGreen;
+    public GameObject DebugYellow;
+    public GameObject DebugRed;
+    public GameObject DebugOrange;
 
     public Material ActiveMaterial;
 
@@ -39,9 +60,9 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller? primaryController;
     private OVRInput.Controller? secondaryController;
 
-    private LRTransform? origin;
+    private LRTransform? grabOrigin;
 
-    private Vector3 initCameraPos;
+    private Vector3 initCenterEyePos;
 
     private Rigidbody _shovelRigidbody;
 
@@ -53,22 +74,39 @@ public class ShovelBehaviour : MonoBehaviour
     private Collider _pileBoundaryCollider;
     private Collider _shovelBoundaryCollider;
 
-    private const float MIN_ANGLE_DEG = 0.1f;
-    private float nextMaxAngle = MIN_ANGLE_DEG;
+    private const float SHAFT_LEN = 0.6f;
 
-    private const float MIN_DISTANCE_M = 0.001f;
-    private float nextMaxDistance = MIN_DISTANCE_M;
+    private ShovelVelocity currentVelocity = new ShovelVelocity
+    {
+        hilt = 0,
+        blade = 0,
+        spin = 0,
+        twist = 0
+    };
 
-    private const float FULL_LEVERAGE_M = 0.5f;
+    private void ResetVelocity()
+    {
+        currentVelocity = new ShovelVelocity
+        {
+            hilt = 0,
+            blade = 0,
+            spin = 0,
+            twist = 0
+        };
+    }
 
     // Start is called before the first frame update
     void Start()
     {
+        PrimaryHand.SetActive(false);
+        SecondaryHand.SetActive(false);
+
         LooseLoad.SetActive(false); //Inactive object from which to instantiate loose loads on unload
 
-        PrimaryAnchor.SetActive(false);
-        SecondaryAnchor.SetActive(false);
-        TernaryAnchor.SetActive(false);
+        DebugGreen.SetActive(false);
+        DebugYellow.SetActive(false);
+        DebugRed.SetActive(false);
+        DebugOrange.SetActive(false);
 
         _shovelRigidbody = Shovel.GetComponent<Rigidbody>();
 
@@ -96,14 +134,16 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void StartGrabbing(OVRInput.Controller primary, OVRInput.Button button)
     {
-        nextMaxDistance = MIN_DISTANCE_M;
-        nextMaxAngle = MIN_ANGLE_DEG;
-
+        ResetVelocity();
         Unhighlight();
 
-        PrimaryAnchor.SetActive(true);
-        SecondaryAnchor.SetActive(true);
-        TernaryAnchor.SetActive(true);
+        PrimaryHand.SetActive(true);
+        SecondaryHand.SetActive(true);
+
+        DebugGreen.SetActive(true);
+        DebugYellow.SetActive(true);
+        DebugRed.SetActive(true);
+        DebugOrange.SetActive(true);
 
         _shovelRigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
 
@@ -114,89 +154,129 @@ public class ShovelBehaviour : MonoBehaviour
         primaryController = primary;
         secondaryController = secondary;
 
-        origin = new LRTransform
+        grabOrigin = new LRTransform
         {
             pos = Shovel.transform.position,
             forward = Shovel.transform.rotation * Vector3.forward,
             up = Shovel.transform.rotation * Vector3.up
         };
 
-        initCameraPos = CameraRig.centerEyeAnchor.position;
+        initCenterEyePos = CameraRig.centerEyeAnchor.position;
 
         DM.Vibrate(primaryController);
     }
 
-    private static LRTransform GetTwohandedControllerPose(OVRInput.Controller primary, OVRInput.Controller secondary)
+    private void ContinueGrabbing()
     {
-        var primaryPos = OVRInput.GetLocalControllerPosition(primary);
-        var primaryRot = OVRInput.GetLocalControllerRotation(primary);
-        var secondaryPos = OVRInput.GetLocalControllerPosition(secondary);
-        var secondaryRot = OVRInput.GetLocalControllerRotation(secondary);
-
-        return new LRTransform
+        if (grabOrigin != null && primaryController != null && secondaryController != null)
         {
-            pos = primaryPos,
-            forward = Vector3.Normalize(secondaryPos - primaryPos),
-            up = Vector3.Slerp(primaryRot * Vector3.up, secondaryRot * Vector3.up, 0.5f)
-        };
-    }
+            var primaryControllerPos = OVRInput.GetLocalControllerPosition(primaryController.Value);
+            var primaryControllerRot = OVRInput.GetLocalControllerRotation(primaryController.Value);
 
-    private LRTransform GetShovelTarget(LRTransform origin, LRTransform controllers, CDRatio cd, float controllerDist)
-    {
-        var scaledControllerDist = controllerDist * cd.Horizontal;
-        var leverageFraction = scaledControllerDist / FULL_LEVERAGE_M;
+            var secondaryControllerPos = OVRInput.GetLocalControllerPosition(secondaryController.Value);
+            var secondaryControllerRot = OVRInput.GetLocalControllerRotation(secondaryController.Value);
 
-        var leverCD = cd.Rotational == 1.0f ? cd.Rotational : leverageFraction * cd.Rotational; //Only scale when cd ratio is not none (1)
+            var controllerForward = Vector3.Normalize(secondaryControllerPos - primaryControllerPos);
+            var controllerUp = Vector3.Slerp(primaryControllerRot * Vector3.up, secondaryControllerRot * Vector3.up, 0.5f);
 
-        var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - initCameraPos;
-        var cameraPosDiffHorizontal = new Vector3(x: cameraPosDiff.x, y: 0, z: cameraPosDiff.z);
-
-        var movedOriginPos = origin.pos + cameraPosDiffHorizontal;
-        var controllerPosDiff = controllers.pos - movedOriginPos;
-
-        return new LRTransform
-        {
-            pos = movedOriginPos + Vector3.Scale(controllerPosDiff, new Vector3(x: cd.Horizontal, y: cd.Vertical, z: cd.Horizontal)),
-            forward = Vector3.Slerp(origin.forward, controllers.forward, leverCD),
-            up = Vector3.Slerp(origin.up, controllers.up, cd.Rotational)
-        };
-    }
-
-    private void MoveFrame(OVRInput.Controller primary, OVRInput.Controller secondary)
-    {
-        if(origin != null)
-        {
-            var controllers = GetTwohandedControllerPose(primary: primary, secondary: secondary);
+            var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - initCenterEyePos;
+            var cameraPosDiffHorizontal = new Vector3(x: cameraPosDiff.x, y: 0, z: cameraPosDiff.z);
+            var originPos = grabOrigin.pos + cameraPosDiffHorizontal;
 
             var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
 
-            var primaryPos = OVRInput.GetLocalControllerPosition(primary);
-            var secondaryPos = OVRInput.GetLocalControllerPosition(secondary);
-            var controllerDist = Vector3.Magnitude(secondaryPos - primaryPos);
+            var controllerPosDiff = primaryControllerPos - originPos;
+            var targetPosDiff = cd == null ? controllerPosDiff : Vector3.Scale(controllerPosDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
+            var targetHiltPos = originPos + targetPosDiff;
 
-            var target = GetShovelTarget(origin: origin, controllers: controllers, cd: cd, controllerDist: controllerDist);
-            var targetRot = Quaternion.LookRotation(target.forward, target.up);
+            //Rotate horiz forward vec 45 degrees downwards for "natural resting" shovel position
+            var originForwardHorizontal = Vector3.Normalize(new Vector3(x: grabOrigin.forward.x, y: 0, z: grabOrigin.forward.z));
+            var originRightHorizontal = Vector3.Normalize(new Vector3(x: grabOrigin.forward.z, y: 0, z: -grabOrigin.forward.x));
+            var originForward = Quaternion.AngleAxis(45, originRightHorizontal) * originForwardHorizontal;
 
-            PrimaryAnchor.transform.position = target.pos + origin.forward * controllerDist;
-            SecondaryAnchor.transform.position = target.pos + controllers.forward * controllerDist;
-            TernaryAnchor.transform.position = target.pos + target.forward * controllerDist;
+            //var originForward = Vector3.Slerp(grabOrigin.forward, originForwardDown, targetHiltPos.y / SHAFT_LEN);
 
-            var nextPos = Vector3.MoveTowards(Shovel.transform.position, target.pos, nextMaxDistance);
-            nextMaxDistance += MIN_DISTANCE_M;
+            var betweenControllersDist = Vector3.Magnitude(secondaryControllerPos - primaryControllerPos);
+            var betweenHandsDist = cd == null ? betweenControllersDist : betweenControllersDist * cd.HorizontalRatio;
 
-            var nextRot = Quaternion.RotateTowards(Shovel.transform.rotation, targetRot, nextMaxAngle);
-            nextMaxAngle += MIN_ANGLE_DEG;
+            var targetUp = cd == null ? controllerUp : Vector3.Slerp(grabOrigin.up, controllerUp, cd.RotationalRatio);
 
-            Shovel.transform.SetPositionAndRotation(nextPos, nextRot);
+            var leverageRatio = betweenHandsDist / (SHAFT_LEN * 0.5f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
+            var forwardCD = Math.Min(leverageRatio * cd?.RotationalRatio ?? 1, 1.0f); //Only scale up to full C/D
+            var targetForward = Vector3.Slerp(originForward, controllerForward, forwardCD);
+
+            var distToBlade = Vector3.Magnitude(ShovelBlade.transform.position - Shovel.transform.position);
+            var targetBladePos = targetHiltPos + targetForward * distToBlade;
+
+            var clippingOffset = targetBladePos.y < 0 ? -targetBladePos.y : 0.0f;
+            targetHiltPos += new Vector3(x: 0, y: clippingOffset, z: 0);
+
+            DebugRed.transform.position = originPos;
+
+            DebugOrange.transform.position = targetHiltPos + originForward * betweenControllersDist;
+            DebugYellow.transform.position = targetHiltPos + controllerForward * betweenControllersDist;
+            DebugGreen.transform.position = targetHiltPos + targetForward * betweenControllersDist;
+
+            var currentBladePos = ShovelBlade.transform.position;
+            var currentHiltPos = Shovel.transform.position;
+            var currentForward = Shovel.transform.forward;
+            var currentUp = Shovel.transform.up;
+
+            var maxVelocity = cd != null ? new ShovelVelocity
+            {
+                blade = currentVelocity.blade + cd.Acceleration * Time.deltaTime, // m/s
+                hilt = currentVelocity.hilt + cd.Acceleration * Time.deltaTime, // m/s
+                spin = currentVelocity.spin + cd.SpinAcceleration * Time.deltaTime, // deg/s
+                twist = currentVelocity.twist + cd.TwistAcceleration * Time.deltaTime, // deg/s
+            } : null;
+
+            var nextHiltPos = maxVelocity == null ? targetHiltPos : Vector3.MoveTowards(currentHiltPos, targetHiltPos, maxDistanceDelta: maxVelocity.hilt * Time.deltaTime);
+            var nextForward = maxVelocity == null ? targetForward : Vector3.RotateTowards(currentForward, targetForward, maxRadiansDelta: Mathf.Deg2Rad * maxVelocity.spin * Time.deltaTime, maxMagnitudeDelta: 0.0f);
+            var nextUp = maxVelocity == null ? targetUp : Vector3.RotateTowards(currentUp, targetUp, maxRadiansDelta: Mathf.Deg2Rad * maxVelocity.twist * Time.deltaTime, maxMagnitudeDelta: 0.0f);
+
+            Shovel.transform.SetPositionAndRotation(nextHiltPos, Quaternion.LookRotation(nextForward, nextUp));
+
+            currentVelocity = new ShovelVelocity
+            {
+                blade = Vector3.Magnitude(ShovelBlade.transform.position - currentBladePos) / Time.deltaTime, // m/s
+                hilt = Vector3.Magnitude(nextHiltPos - currentHiltPos) / Time.deltaTime, // m/s
+                spin = Vector3.Angle(nextForward, currentForward) / Time.deltaTime,  // deg/s
+                twist = Vector3.Angle(nextUp, currentUp) / Time.deltaTime, // deg/s
+            };
+
+            PrimaryHand.transform.position = Shovel.transform.position;
+            SecondaryHand.transform.position = Shovel.transform.position + Shovel.transform.forward * Math.Min(clippingOffset + betweenHandsDist, SHAFT_LEN); //Clamp secondary hand position to shaft
+
+            //Update shovel load state
+            if (_shovelLoadRenderer.enabled)
+            {
+                var canUnload = !_pileBoundaryCollider.bounds.Contains(ShovelBlade.transform.position);  //Cannot unload while inside pile boundary collider
+                if (canUnload)
+                {
+                    var shovelUp = Shovel.transform.rotation * Vector3.up;
+                    var shovelTiltedDown = shovelUp.y < 0; //Shovel pointing downward triggers unload
+
+                    if (shovelTiltedDown) UnloadBlade();
+                }
+            }
+            else
+            {
+                var canLoad = _pileCollider.bounds.Contains(ShovelBlade.transform.position); //Blade is loaded when entering pile collider
+                if (canLoad) LoadBlade();
+            }
         }
-            
+
     }
 
     private void StopGrabbing()
     {
-        PrimaryAnchor.SetActive(false);
-        SecondaryAnchor.SetActive(false);
-        TernaryAnchor.SetActive(false);
+        PrimaryHand.SetActive(false);
+        SecondaryHand.SetActive(false);
+
+        DebugGreen.SetActive(false);
+        DebugYellow.SetActive(false);
+        DebugRed.SetActive(false);
+        DebugOrange.SetActive(false);
 
         DM.Vibrate(primaryController);
 
@@ -209,8 +289,7 @@ public class ShovelBehaviour : MonoBehaviour
 
     private void LoadBlade()
     {
-        nextMaxDistance = MIN_DISTANCE_M;
-        nextMaxAngle = MIN_ANGLE_DEG;
+        ResetVelocity();
 
         _shovelLoadRenderer.enabled = true;
 
@@ -231,12 +310,16 @@ public class ShovelBehaviour : MonoBehaviour
 
         Pile.transform.localScale = nextPileScale;
         Pile.transform.position = nextPilePos;
+
+        if (Pile.transform.localScale.y < 0.05f)
+        {
+            //Pile is fully shovelled, disable pile object
+            Pile.SetActive(false);
+        }
     }
 
     private void UnloadBlade()
     {
-        nextMaxDistance = MIN_DISTANCE_M;
-        nextMaxAngle = MIN_ANGLE_DEG;
 
         _shovelLoadRenderer.enabled = false;
 
@@ -247,12 +330,17 @@ public class ShovelBehaviour : MonoBehaviour
         var newLooseLoad = GameObject.Instantiate(LooseLoad, ShovelLoad.transform.position, ShovelLoad.transform.rotation, parent: Parent.transform);
         newLooseLoad.SetActive(true);
 
-        if (Pile.transform.localScale.y == 0)
+        //Yeet new rigidbody based on current shovel momentum
+        var newRigidBody = newLooseLoad.GetComponent<Rigidbody>();
+        newRigidBody.AddForce(Shovel.transform.rotation * Vector3.up * currentVelocity.blade, ForceMode.VelocityChange);
+
+        if (!Pile.activeSelf)
         {
-            //Pile is fully shovelled, display as done
+            //Pile is fully shovelled, mark as done through boundary
             _pileBoundaryRenderer.material = ActiveMaterial;
-            Pile.SetActive(false);
         }
+
+        ResetVelocity();
     }
 
     // Update is called once per frame
@@ -269,29 +357,7 @@ public class ShovelBehaviour : MonoBehaviour
             }
             else
             {
-                //Move shovel
-                if (primaryController != null && secondaryController != null)
-                {
-                    MoveFrame(primary: primaryController.Value, secondary: secondaryController.Value);
-                }
-
-                //Update shovel load state
-                if (_shovelLoadRenderer.enabled)
-                {
-                    var canUnload = !_pileBoundaryCollider.bounds.Contains(ShovelBlade.transform.position);  //Cannot unload while inside pile boundary collider
-                    if (canUnload)
-                    {
-                        var shovelUp = Shovel.transform.rotation * Vector3.up;
-                        var shovelTiltedDown = Vector3.Angle(Vector3.up, shovelUp) >= 90; //Shovel pointing downward triggers unload
-                        if (shovelTiltedDown) UnloadBlade();
-                    }
-                }
-                else
-                {
-                    var canLoad = _pileCollider.bounds.Contains(ShovelBlade.transform.position); //Blade is loaded when entering pile collider
-                    if (canLoad) LoadBlade();
-                }
-
+                ContinueGrabbing();
             }
         }
         else

@@ -135,14 +135,14 @@ public class CubeBehaviour : MonoBehaviour
                         //Apply position diff during grab interaction with C/D
                         var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
                         var posDiff = controllerCurrentPos - controllerInitPos;
-                        var scaledPosDif = new Vector3(x: posDiff.x * CD.Horizontal, y: posDiff.y * CD.Vertical, z: posDiff.z * CD.Horizontal);
+                        var scaledPosDif = CD == null ? posDiff : new Vector3(x: posDiff.x * CD.HorizontalRatio, y: posDiff.y * CD.VerticalRatio, z: posDiff.z * CD.HorizontalRatio);
 
                         obj.transform.position = objInitPos + scaledPosDif;
 
                         //Apply rotation diff during grab interaction with C/D
                         var controllerCurrentRot = OVRInput.GetLocalControllerRotation(grabbingController.Value);
                         var rotDiff = controllerCurrentRot * Quaternion.Inverse(controllerInitRot);
-                        var scaledRotDiff = Quaternion.Slerp(Quaternion.identity, rotDiff, CD.Rotational);
+                        var scaledRotDiff = CD == null ? rotDiff : Quaternion.Slerp(Quaternion.identity, rotDiff, CD.RotationalRatio);
 
                         obj.transform.rotation = scaledRotDiff * objInitRot;
                     }

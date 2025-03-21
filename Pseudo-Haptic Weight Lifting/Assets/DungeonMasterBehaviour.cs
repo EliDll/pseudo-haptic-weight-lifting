@@ -16,19 +16,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public GameObject LeftHandModel;
     public GameObject RightHandModel;
 
-    public CDRatio NormalCDRatio = new CDRatio
-    {
-        Horizontal = 1.0f,
-        Vertical = 1.0f,
-        Rotational = 1.0f,
-    };
+    public CDParams? NormalCDRatio;
 
-    public CDRatio LoadedCDRatio = new CDRatio
-    {
-        Horizontal = 1.0f,
-        Vertical = 1.0f,
-        Rotational = 1.0f,
-    };
+    public CDParams? LoadedCDRatio;
 
     private OVRInput.Button buttonA = OVRInput.Button.One;
     private OVRInput.Button buttonB = OVRInput.Button.Two;
@@ -89,9 +79,62 @@ public class DungeonMasterBehaviour : MonoBehaviour
         currentTask.SetActive(true);
     }
 
+    private void SwitchCDRatio(CDIntensity intensity)
+    {
+        currentIntensity = intensity;
+
+        NormalCDRatio = intensity switch
+        {
+            CDIntensity.None => null,
+            CDIntensity.Subtle => new CDParams
+            {
+                HorizontalRatio = 0.9f,
+                VerticalRatio = 0.8f,
+                RotationalRatio = 0.9f,
+                Acceleration = 10f,
+                SpinAcceleration = 360f,
+                TwistAcceleration = 360f,
+            },
+            CDIntensity.Pronounced => new CDParams
+            {
+                HorizontalRatio = 0.8f,
+                VerticalRatio = 0.7f,
+                RotationalRatio = 0.8f,
+                Acceleration = 9f,
+                SpinAcceleration = 315f,
+                TwistAcceleration = 315f,
+            },
+            _ => throw new System.NotImplementedException()
+        };
+
+        LoadedCDRatio = intensity switch
+        {
+            CDIntensity.None => null,
+            CDIntensity.Subtle => new CDParams
+            {
+                HorizontalRatio = 0.85f,
+                VerticalRatio = 0.75f,
+                RotationalRatio = 0.85f,
+                Acceleration = 8f,
+                SpinAcceleration = 270f,
+                TwistAcceleration = 270f,
+            },
+            CDIntensity.Pronounced => new CDParams
+            {
+                HorizontalRatio = 0.7f,
+                VerticalRatio = 0.6f,
+                RotationalRatio = 0.7f,
+                Acceleration = 7f,
+                SpinAcceleration = 225f,
+                TwistAcceleration = 225f,
+            },
+            _ => throw new System.NotImplementedException()
+        };
+    }
+
     private void ChangeCDRatio()
     {
-        currentIntensity = currentIntensity switch
+        var newIntensity = currentIntensity switch
         {
             CDIntensity.None => CDIntensity.Subtle,
             CDIntensity.Subtle => CDIntensity.Pronounced,
@@ -99,53 +142,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
             _ => throw new System.NotImplementedException(),
         };
 
-        NormalCDRatio = currentIntensity switch
-        {
-            CDIntensity.None => new CDRatio
-            {
-                Horizontal = 1.0f,
-                Vertical = 1.0f,
-                Rotational = 1.0f
-            },
-            CDIntensity.Subtle => new CDRatio
-            {
-                Horizontal = 0.9f,
-                Vertical = 0.8f,
-                Rotational = 0.9f
-            },
-            CDIntensity.Pronounced => new CDRatio
-            {
-                Horizontal = 0.8f,
-                Vertical = 0.7f,
-                Rotational = 0.8f
-            },
-            _ => throw new System.NotImplementedException()
-        };
+        SwitchCDRatio(newIntensity);
 
-        LoadedCDRatio = currentIntensity switch
-        {
-            CDIntensity.None => new CDRatio
-            {
-                Horizontal = 1.0f,
-                Vertical = 1.0f,
-                Rotational = 1.0f
-            },
-            CDIntensity.Subtle => new CDRatio
-            {
-                Horizontal = 0.85f,
-                Vertical = 0.75f,
-                Rotational = 0.85f
-            },
-            CDIntensity.Pronounced => new CDRatio
-            {
-                Horizontal = 0.7f,
-                Vertical = 0.6f,
-                Rotational = 0.7f
-            },
-            _ => throw new System.NotImplementedException()
-        };
-
-        var vibrateDuration = currentIntensity switch
+        var vibrateDuration = newIntensity switch
         {
             CDIntensity.None => 0.1f,
             CDIntensity.Subtle => 0.5f,
@@ -159,6 +158,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        SwitchCDRatio(CDIntensity.None);
+
         currentTask = null;
         pressedButton = null;
         BasicTask.SetActive(false);
