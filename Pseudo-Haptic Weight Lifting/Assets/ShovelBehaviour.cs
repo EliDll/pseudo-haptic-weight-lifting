@@ -60,9 +60,8 @@ public class ShovelBehaviour : MonoBehaviour
     private OVRInput.Controller? primaryController;
     private OVRInput.Controller? secondaryController;
 
-    private LRTransform? grabOrigin;
-
-    private Vector3 initCenterEyePos;
+    private Transform? shovelOrigin;
+    private Transform? headOrigin;
 
     private Rigidbody _shovelRigidbody;
 
@@ -83,17 +82,6 @@ public class ShovelBehaviour : MonoBehaviour
         spin = 0,
         twist = 0
     };
-
-    private void ResetVelocity()
-    {
-        currentVelocity = new ShovelVelocity
-        {
-            hilt = 0,
-            blade = 0,
-            spin = 0,
-            twist = 0
-        };
-    }
 
     // Start is called before the first frame update
     void Start()
@@ -120,6 +108,17 @@ public class ShovelBehaviour : MonoBehaviour
 
         _shovelLoadRenderer.enabled = false;
         _shovelBoundaryRenderer.enabled = false;
+    }
+
+    private void ResetVelocity()
+    {
+        currentVelocity = new ShovelVelocity
+        {
+            hilt = 0,
+            blade = 0,
+            spin = 0,
+            twist = 0
+        };
     }
 
     private void Highlight()
@@ -150,25 +149,36 @@ public class ShovelBehaviour : MonoBehaviour
         var secondary = primary == leftHand ? rightHand : leftHand;
 
         grabbingButton = button;
-
         primaryController = primary;
         secondaryController = secondary;
 
-        grabOrigin = new LRTransform
-        {
-            pos = Shovel.transform.position,
-            forward = Shovel.transform.rotation * Vector3.forward,
-            up = Shovel.transform.rotation * Vector3.up
-        };
-
-        initCenterEyePos = CameraRig.centerEyeAnchor.position;
+        shovelOrigin = Shovel.transform;
+        headOrigin = CameraRig.centerEyeAnchor.transform;
 
         DM.Vibrate(primaryController);
     }
 
+    private void StopGrabbing()
+    {
+        DM.Vibrate(primaryController);
+
+        PrimaryHand.SetActive(false);
+        SecondaryHand.SetActive(false);
+
+        DebugGreen.SetActive(false);
+        DebugYellow.SetActive(false);
+        DebugRed.SetActive(false);
+        DebugOrange.SetActive(false);
+
+        _shovelRigidbody.isKinematic = false; //reactivate physics for rigidbody
+
+        primaryController = null;
+        secondaryController = null;
+    }
+
     private void ContinueGrabbing()
     {
-        if (grabOrigin != null && primaryController != null && secondaryController != null)
+        if (shovelOrigin != null && headOrigin != null && primaryController != null && secondaryController != null)
         {
             var primaryControllerPos = OVRInput.GetLocalControllerPosition(primaryController.Value);
             var primaryControllerRot = OVRInput.GetLocalControllerRotation(primaryController.Value);
@@ -179,9 +189,8 @@ public class ShovelBehaviour : MonoBehaviour
             var controllerForward = Vector3.Normalize(secondaryControllerPos - primaryControllerPos);
             var controllerUp = Vector3.Slerp(primaryControllerRot * Vector3.up, secondaryControllerRot * Vector3.up, 0.5f);
 
-            var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - initCenterEyePos;
-            var cameraPosDiffHorizontal = new Vector3(x: cameraPosDiff.x, y: 0, z: cameraPosDiff.z);
-            var originPos = grabOrigin.pos + cameraPosDiffHorizontal;
+            var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - headOrigin.position;
+            var originPos = shovelOrigin.position + cameraPosDiff;
 
             var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
 
@@ -190,16 +199,14 @@ public class ShovelBehaviour : MonoBehaviour
             var targetHiltPos = originPos + targetPosDiff;
 
             //Rotate horiz forward vec 45 degrees downwards for "natural resting" shovel position
-            var originForwardHorizontal = Vector3.Normalize(new Vector3(x: grabOrigin.forward.x, y: 0, z: grabOrigin.forward.z));
-            var originRightHorizontal = Vector3.Normalize(new Vector3(x: grabOrigin.forward.z, y: 0, z: -grabOrigin.forward.x));
+            var originForwardHorizontal = Vector3.Normalize(new Vector3(x: shovelOrigin.forward.x, y: 0, z: shovelOrigin.forward.z));
+            var originRightHorizontal = Vector3.Normalize(new Vector3(x: shovelOrigin.forward.z, y: 0, z: -shovelOrigin.forward.x));
             var originForward = Quaternion.AngleAxis(45, originRightHorizontal) * originForwardHorizontal;
-
-            //var originForward = Vector3.Slerp(grabOrigin.forward, originForwardDown, targetHiltPos.y / SHAFT_LEN);
 
             var betweenControllersDist = Vector3.Magnitude(secondaryControllerPos - primaryControllerPos);
             var betweenHandsDist = cd == null ? betweenControllersDist : betweenControllersDist * cd.HorizontalRatio;
 
-            var targetUp = cd == null ? controllerUp : Vector3.Slerp(grabOrigin.up, controllerUp, cd.RotationalRatio);
+            var targetUp = cd == null ? controllerUp : Vector3.Slerp(shovelOrigin.up, controllerUp, cd.RotationalRatio);
 
             var leverageRatio = betweenHandsDist / (SHAFT_LEN * 0.5f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
             var forwardCD = Math.Min(leverageRatio * cd?.RotationalRatio ?? 1, 1.0f); //Only scale up to full C/D
@@ -236,6 +243,9 @@ public class ShovelBehaviour : MonoBehaviour
 
             Shovel.transform.SetPositionAndRotation(nextHiltPos, Quaternion.LookRotation(nextForward, nextUp));
 
+            PrimaryHand.transform.position = Shovel.transform.position;
+            SecondaryHand.transform.position = Shovel.transform.position + Shovel.transform.forward * Math.Min(clippingOffset + betweenHandsDist, SHAFT_LEN); //Clamp secondary hand position to shaft
+
             currentVelocity = new ShovelVelocity
             {
                 blade = Vector3.Magnitude(ShovelBlade.transform.position - currentBladePos) / Time.deltaTime, // m/s
@@ -244,17 +254,13 @@ public class ShovelBehaviour : MonoBehaviour
                 twist = Vector3.Angle(nextUp, currentUp) / Time.deltaTime, // deg/s
             };
 
-            PrimaryHand.transform.position = Shovel.transform.position;
-            SecondaryHand.transform.position = Shovel.transform.position + Shovel.transform.forward * Math.Min(clippingOffset + betweenHandsDist, SHAFT_LEN); //Clamp secondary hand position to shaft
-
             //Update shovel load state
             if (_shovelLoadRenderer.enabled)
             {
                 var canUnload = !_pileBoundaryCollider.bounds.Contains(ShovelBlade.transform.position);  //Cannot unload while inside pile boundary collider
                 if (canUnload)
                 {
-                    var shovelUp = Shovel.transform.rotation * Vector3.up;
-                    var shovelTiltedDown = shovelUp.y < 0; //Shovel pointing downward triggers unload
+                    var shovelTiltedDown = Shovel.transform.up.y < 0; //Shovel pointing downward triggers unload
 
                     if (shovelTiltedDown) UnloadBlade();
                 }
@@ -266,25 +272,6 @@ public class ShovelBehaviour : MonoBehaviour
             }
         }
 
-    }
-
-    private void StopGrabbing()
-    {
-        PrimaryHand.SetActive(false);
-        SecondaryHand.SetActive(false);
-
-        DebugGreen.SetActive(false);
-        DebugYellow.SetActive(false);
-        DebugRed.SetActive(false);
-        DebugOrange.SetActive(false);
-
-        DM.Vibrate(primaryController);
-
-        _shovelRigidbody.isKinematic = false; //reactivate physics for rigidbody
-
-        grabbingButton = null;
-        primaryController = null;
-        secondaryController = null;
     }
 
     private void LoadBlade()
@@ -332,15 +319,13 @@ public class ShovelBehaviour : MonoBehaviour
 
         //Yeet new rigidbody based on current shovel momentum
         var newRigidBody = newLooseLoad.GetComponent<Rigidbody>();
-        newRigidBody.AddForce(Shovel.transform.rotation * Vector3.up * currentVelocity.blade, ForceMode.VelocityChange);
+        newRigidBody.AddForce(Shovel.transform.up * currentVelocity.blade, ForceMode.VelocityChange);
 
         if (!Pile.activeSelf)
         {
             //Pile is fully shovelled, mark as done through boundary
             _pileBoundaryRenderer.material = ActiveMaterial;
         }
-
-        ResetVelocity();
     }
 
     // Update is called once per frame
@@ -350,9 +335,10 @@ public class ShovelBehaviour : MonoBehaviour
         {
             //Shovel active: Handle grab interaction
 
-            var buttonReleased = !OVRInput.Get(grabbingButton.Value);
+            var buttonReleased = !Calc.IsPressed(grabbingButton.Value);
             if (buttonReleased)
             {
+                grabbingButton = null;
                 StopGrabbing();
             }
             else

@@ -3,180 +3,254 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
+public record CubeVelocity
+{
+    /// <summary>
+    /// m/s
+    /// </summary>
+    public float linear;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float spin;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float twist;
+}
+
 public class CubeBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
 
-    public GameObject obj;
-    public Collider barrier;
+    public OVRCameraRig CameraRig;
 
-    public Material defaultMat;
-    public Material activeMat;
-    public Material grabbingMaterial;
+    public GameObject Cube;
+    public GameObject CubeBoundary;
 
-    private Collider _collider;
-    private Rigidbody _rigidbody;
-    private Renderer _renderer;
+    public GameObject Barrier;
 
-    private OVRInput.Button leftButton = OVRInput.Button.PrimaryHandTrigger;
-    private OVRInput.Button rightButton = OVRInput.Button.SecondaryHandTrigger;
-
-    private OVRInput.Controller leftHand = OVRInput.Controller.LTouch;
-    private OVRInput.Controller rightHand = OVRInput.Controller.RTouch;
-
-    private bool isHighlighted = false;
-    private bool hasCollided = false;
-    private bool ignoreCollision = false;
+    public GameObject Hand;
 
     private OVRInput.Button? grabbingButton;
     private OVRInput.Controller? grabbingController;
 
-    private Quaternion controllerInitRot;
-    private Quaternion objInitRot;
-    private Vector3 controllerInitPos;
-    private Vector3 objInitPos;
+    private Pose cubeOrigin;
+    private Pose headOrigin;
+    private Pose controllerOrigin;
 
-    private void Highlight()
+    private Rigidbody _cubeRigidbody;
+
+    private Renderer _cubeBoundaryRenderer;
+
+    private Collider _cubeCollider;
+    private Collider _barrierCollider;
+
+    private bool hasCollided = false;
+    private bool ignoreCollision = false;
+
+    private CubeVelocity currentVelocity = new CubeVelocity
     {
-        if (!isHighlighted)
-        {
-            isHighlighted = true;
-            _renderer.material = activeMat;
-        }
-    }
-
-    private void UnHighlight()
-    {
-        if (isHighlighted)
-        {
-            isHighlighted = false;
-            _renderer.material = defaultMat;
-        }
-    }
-
-    private void StartGrabbing(OVRInput.Controller controller, OVRInput.Button button)
-    {
-        _rigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
-        _renderer.material = grabbingMaterial;
-
-        //Ignore collision at the start of grab collision (this is necessary to grab objects that are already colliding at interaction start)
-        ignoreCollision = true;
-
-        grabbingButton = button;
-
-        grabbingController = controller;
-        controllerInitPos = OVRInput.GetLocalControllerPosition(controller);
-        controllerInitRot = OVRInput.GetLocalControllerRotation(controller);
-
-        objInitPos = obj.transform.position;
-        objInitRot = obj.transform.rotation;
-
-        DM.Vibrate(grabbingController);
-    }
-
-    private void StopGrabbing()
-    {
-        _rigidbody.isKinematic = false; //reactivate physics for rigidbody
-        _renderer.material = defaultMat;
-
-        DM.Vibrate(grabbingController);
-    }
+        linear = 0,
+        twist = 0,
+    };
 
     // Start is called before the first frame update
     void Start()
     {
-        _collider = obj.GetComponent<Collider>();
-        _rigidbody = obj.GetComponent<Rigidbody>();
-        _renderer = obj.GetComponent<Renderer>();
+        _cubeRigidbody = Cube.GetComponent<Rigidbody>();
+
+        _cubeBoundaryRenderer = CubeBoundary.GetComponent<Renderer>();
+
+        _cubeCollider = Cube.GetComponent<Collider>();
+        _barrierCollider = Barrier.GetComponent<Collider>();
+
+        _cubeBoundaryRenderer.enabled = false;
     }
+
+    private void ResetVelocity()
+    {
+        currentVelocity = new CubeVelocity { linear = 0, twist = 0 };
+    }
+
+    private void ResetIgnoreCollision()
+    {
+        ignoreCollision = false;
+    }
+
+    private void Highlight()
+    {
+        if (!_cubeBoundaryRenderer.enabled) _cubeBoundaryRenderer.enabled = true;
+    }
+
+    private void Unhighlight()
+    {
+        if (_cubeBoundaryRenderer.enabled) _cubeBoundaryRenderer.enabled = false;
+    }
+
+    private void StartGrabbing(OVRInput.Controller primary, OVRInput.Button button)
+    {
+        ResetVelocity();
+        Unhighlight();
+
+        Hand.SetActive(true);
+
+        _cubeRigidbody.isKinematic = true; //ignore physiccs for rigidbody whhile grabbing
+
+        if (IsColliding())
+        {
+            //If already colliding at grab start, ignore collisions for first second of interaction
+            ignoreCollision = true;
+            Invoke("ResetIgnoreCollision", 1f);
+        }
+
+        grabbingButton = button;
+        grabbingController = primary;
+
+        cubeOrigin = new Pose(Cube.transform.position, Cube.transform.rotation);
+        headOrigin = Calc.GetHeadPose(CameraRig);
+        controllerOrigin = Calc.GetControllerPose(primary);
+
+        //Align hand with controller
+        Hand.transform.SetPositionAndRotation(controllerOrigin.position, controllerOrigin.rotation);
+
+        DM.Vibrate(grabbingController);
+    }
+
+    private void ContinueGrabbing()
+    {
+        if (grabbingController != null)
+        {
+            var controllerCurrent = Calc.GetControllerPose(grabbingController.Value);
+            var headCurrent = Calc.GetHeadPose(CameraRig);
+
+            var headPosDiff = headCurrent.position - headOrigin.position;
+            var originPos = controllerOrigin.position + headPosDiff;
+
+            var cd = DM.NormalCDRatio;
+
+            var controllerPosDiff = controllerCurrent.position - originPos;
+            var targetPosDiff = cd == null ? controllerPosDiff : Vector3.Scale(controllerPosDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
+            var targetPos = originPos + targetPosDiff;
+
+            var targetForward = cd == null ? controllerCurrent.forward : Vector3.Slerp(controllerOrigin.forward, controllerCurrent.forward, cd.RotationalRatio);
+            var targetUp = cd == null ? controllerCurrent.up : Vector3.Slerp(controllerOrigin.up, controllerCurrent.up, cd.RotationalRatio);
+
+            var currentPos = Hand.transform.position;
+            var currentForward = Hand.transform.forward;
+            var currentUp = Hand.transform.up;
+
+            var maxVelocity = cd != null ? new CubeVelocity
+            {
+                linear = currentVelocity.linear + cd.Acceleration * Time.deltaTime, // m/s
+                twist = currentVelocity.twist + cd.TwistAcceleration * Time.deltaTime, // deg/s
+                spin = currentVelocity.spin + cd.SpinAcceleration * Time.deltaTime, // deg/s
+            } : null;
+
+            var nextPos = maxVelocity == null ? targetPos : Vector3.MoveTowards(currentPos, targetPos, maxDistanceDelta: maxVelocity.linear * Time.deltaTime);
+            var nextForward = maxVelocity == null ? targetForward : Vector3.RotateTowards(currentForward, targetForward, maxRadiansDelta: Mathf.Deg2Rad * maxVelocity.spin * Time.deltaTime, maxMagnitudeDelta: 0.0f);
+            var nextUp = maxVelocity == null ? targetUp : Vector3.RotateTowards(currentUp, targetUp, maxRadiansDelta: Mathf.Deg2Rad * maxVelocity.twist * Time.deltaTime, maxMagnitudeDelta: 0.0f);
+
+            var nextRot = Quaternion.LookRotation(nextForward, nextUp);
+            Hand.transform.SetPositionAndRotation(nextPos, nextRot);
+
+            var controllerRotDiff = nextRot * Quaternion.Inverse(controllerOrigin.rotation);
+
+            var controllerToCube = cubeOrigin.position - controllerOrigin.position;
+            Cube.transform.SetPositionAndRotation(nextPos + controllerRotDiff * controllerToCube, controllerRotDiff * cubeOrigin.rotation);
+
+            currentVelocity = new CubeVelocity
+            {
+                linear = Vector3.Magnitude(nextPos - currentPos) / Time.deltaTime,
+                spin = Vector3.Angle(nextForward, currentForward) / Time.deltaTime,  // deg/s
+                twist = Vector3.Angle(nextUp, currentUp) / Time.deltaTime, // deg/s
+            };
+        }
+    }
+
+    private void StopGrabbing()
+    {
+        DM.Vibrate(grabbingController);
+
+        Hand.SetActive(false);
+
+        _cubeRigidbody.isKinematic = false; //reactivate physics for rigidbody
+
+        grabbingController = null;
+    }
+
+    private bool IsColliding()
+    {
+        return _cubeCollider.bounds.Intersects(_barrierCollider.bounds);
+    }
+
 
     private void Update()
     {
-        if (hasCollided && grabbingButton != null)
+        if (grabbingButton != null)
         {
-            //Await button release before allowing to grab again
-            var released = !OVRInput.Get(grabbingButton.Value);
+            //Cube active: Handle grab interaction
 
-            if (released)
+            var buttonReleased = !Calc.IsPressed(grabbingButton.Value);
+            if (buttonReleased)
             {
-                hasCollided = false;
-                grabbingButton = null;
-            }
-        }
-        else
-        {
-            if (grabbingButton != null)
-            {
-                //Check for end of grab interaction
-
-                var buttonReleased = !OVRInput.Get(grabbingButton.Value);
-                var colliding = _collider.bounds.Intersects(barrier.bounds);
-
-                if (buttonReleased)
+                if (hasCollided)
                 {
-                    StopGrabbing();
+                    //Reenable grabbing after collision on button release
                     grabbingButton = null;
-                }
-                else if (colliding && !ignoreCollision)
-                {
-                    StopGrabbing();
-                    hasCollided = true;
+                    hasCollided = false;
                 }
                 else
                 {
-                    if(grabbingController != null)
-                    {
-                        //Continue grab interaction and update transform
-
-                        if (!colliding && ignoreCollision) ignoreCollision = false; //set flag to stop grab interaction on next collision as soon as object is unstuck
-
-                        var CD = DM.NormalCDRatio;
-
-                        //Apply position diff during grab interaction with C/D
-                        var controllerCurrentPos = OVRInput.GetLocalControllerPosition(grabbingController.Value);
-                        var posDiff = controllerCurrentPos - controllerInitPos;
-                        var scaledPosDif = CD == null ? posDiff : new Vector3(x: posDiff.x * CD.HorizontalRatio, y: posDiff.y * CD.VerticalRatio, z: posDiff.z * CD.HorizontalRatio);
-
-                        obj.transform.position = objInitPos + scaledPosDif;
-
-                        //Apply rotation diff during grab interaction with C/D
-                        var controllerCurrentRot = OVRInput.GetLocalControllerRotation(grabbingController.Value);
-                        var rotDiff = controllerCurrentRot * Quaternion.Inverse(controllerInitRot);
-                        var scaledRotDiff = CD == null ? rotDiff : Quaternion.Slerp(Quaternion.identity, rotDiff, CD.RotationalRatio);
-
-                        obj.transform.rotation = scaledRotDiff * objInitRot;
-                    }
+                    //Grab interaction terminated through voluntary button release
+                    grabbingButton = null;
+                    StopGrabbing();
                 }
             }
             else
             {
-                //Check for highlighting and start of grab interaction
-
-                var leftHandPos = OVRInput.GetLocalControllerPosition(leftHand);
-                var rightHandPos = OVRInput.GetLocalControllerPosition(rightHand);
-
-                var leftTouch = _collider.bounds.Contains(leftHandPos);
-                var rightTouch = _collider.bounds.Contains(rightHandPos);
-
-                if (leftTouch)
+                var isColliding = !ignoreCollision && IsColliding();
+                if (isColliding)
                 {
-                    Highlight();
-
-                    var leftPress = OVRInput.Get(leftButton);
-
-                    if (leftPress) StartGrabbing(leftHand, leftButton);
-                }
-                else if (rightTouch)
-                {
-                    Highlight();
-
-                    var rightPress = OVRInput.Get(rightButton);
-
-                    if (rightPress) StartGrabbing(rightHand, rightButton);
+                    //Grab interaction terminated through collision
+                    hasCollided = true;
+                    StopGrabbing();
                 }
                 else
                 {
-                    UnHighlight();
+                    ContinueGrabbing();
+                }
+            }
+        }
+        else
+        {
+            //Cube inactive: Check for highlighting and start of grab interaction
+
+            var leftHandTransform = Calc.GetControllerPose(Defs.LeftHand);
+            var leftTouch = _cubeCollider.bounds.Contains(leftHandTransform.position);
+
+            if (leftTouch)
+            {
+                Highlight();
+
+                var leftPressed = Calc.IsPressed(Defs.LeftGrabButton);
+                if (leftPressed) StartGrabbing(Defs.LeftHand, Defs.LeftGrabButton);
+            }
+            else
+            {
+                var rightHandTransform = Calc.GetControllerPose(Defs.RightHand);
+                var rightTouch = _cubeCollider.bounds.Contains(rightHandTransform.position);
+
+                if (rightTouch)
+                {
+                    Highlight();
+
+                    var rightPress = Calc.IsPressed(Defs.RightGrabButton);
+                    if (rightPress) StartGrabbing(Defs.RightHand, Defs.RightGrabButton);
+                }
+                else
+                {
+                    Unhighlight();
                 }
             }
         }
