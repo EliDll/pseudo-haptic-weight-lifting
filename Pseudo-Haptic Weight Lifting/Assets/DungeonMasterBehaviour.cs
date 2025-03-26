@@ -3,59 +3,36 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
-public enum CDIntensity{
-    None,
-    Subtle,
-    Pronounced
-}
-
 public class DungeonMasterBehaviour : MonoBehaviour
 {
     public GameObject BasicTask;
     public GameObject ShovellingTask;
-    public GameObject LeftHandModel;
-    public GameObject RightHandModel;
+    public OVRControllerHelper LeftController;
+    public OVRControllerHelper RightController;
 
-    public CDParams? NormalCDRatio;
-
-    public CDParams? LoadedCDRatio;
-
-    private OVRInput.Button buttonA = OVRInput.Button.One;
-    private OVRInput.Button buttonB = OVRInput.Button.Two;
-    private OVRInput.Button buttonX = OVRInput.Button.Three;
-    private OVRInput.Button buttonY = OVRInput.Button.Four;
-
-    private OVRInput.Controller leftHand = OVRInput.Controller.LTouch;
-    private OVRInput.Controller rightHand = OVRInput.Controller.RTouch;
+    public CDParams? NormalCD;
+    public CDParams? LoadedCD;
 
     private GameObject? currentTask;
 
     private OVRInput.Button? pressedButton;
 
-    private bool handsVisible = false;
+    private bool showControllers = false;
 
     private CDIntensity currentIntensity = CDIntensity.None;
 
     public void Vibrate(OVRInput.Controller? controller, float time = 0.1f)
     {
-        if (controller == leftHand)
+        if (controller == Defs.LeftHand)
         {
-            startVib(leftHand);
+            startVib(controller.Value);
             Invoke("stopleftVib", time);
         }
-        else if (controller == rightHand)
+        else if (controller == Defs.RightHand)
         {
-            startVib(rightHand);
+            startVib(controller.Value);
             Invoke("stopRightVib", time);
         }
-    }
-
-    public void ToggleHandVisibility()
-    {
-        handsVisible = !handsVisible;
-
-        LeftHandModel.SetActive(handsVisible);
-        RightHandModel.SetActive(handsVisible);
     }
 
     private void startVib(OVRInput.Controller controller)
@@ -64,12 +41,28 @@ public class DungeonMasterBehaviour : MonoBehaviour
     }
     private void stopleftVib()
     {
-        OVRInput.SetControllerVibration(0, 0, leftHand);
+        OVRInput.SetControllerVibration(0, 0, Defs.LeftHand);
     }
 
     private void stopRightVib()
     {
-        OVRInput.SetControllerVibration(0, 0, rightHand);
+        OVRInput.SetControllerVibration(0, 0, Defs.RightHand);
+    }
+
+    public void ToggleControllerVisibility()
+    {
+        showControllers = !showControllers;
+
+        if (showControllers)
+        {
+            LeftController.m_showState = OVRInput.InputDeviceShowState.Always;
+            RightController.m_showState = OVRInput.InputDeviceShowState.Always;
+        }
+        else
+        {
+            LeftController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
+            RightController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
+        }
     }
 
     private void StartTask(GameObject task)
@@ -79,62 +72,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
         currentTask.SetActive(true);
     }
 
-    private void SwitchCDRatio(CDIntensity intensity)
-    {
-        currentIntensity = intensity;
-
-        NormalCDRatio = intensity switch
-        {
-            CDIntensity.None => null,
-            CDIntensity.Subtle => new CDParams
-            {
-                HorizontalRatio = 0.9f,
-                VerticalRatio = 0.8f,
-                RotationalRatio = 0.9f,
-                Acceleration = 9f,
-                SpinAcceleration = 360f,
-                TwistAcceleration = 360f,
-            },
-            CDIntensity.Pronounced => new CDParams
-            {
-                HorizontalRatio = 0.8f,
-                VerticalRatio = 0.7f,
-                RotationalRatio = 0.8f,
-                Acceleration = 6f,
-                SpinAcceleration = 315f,
-                TwistAcceleration = 315f,
-            },
-            _ => throw new System.NotImplementedException()
-        };
-
-        LoadedCDRatio = intensity switch
-        {
-            CDIntensity.None => null,
-            CDIntensity.Subtle => new CDParams
-            {
-                HorizontalRatio = 0.85f,
-                VerticalRatio = 0.75f,
-                RotationalRatio = 0.85f,
-                Acceleration = 7f,
-                SpinAcceleration = 270f,
-                TwistAcceleration = 270f,
-            },
-            CDIntensity.Pronounced => new CDParams
-            {
-                HorizontalRatio = 0.7f,
-                VerticalRatio = 0.6f,
-                RotationalRatio = 0.7f,
-                Acceleration = 4f,
-                SpinAcceleration = 225f,
-                TwistAcceleration = 225f,
-            },
-            _ => throw new System.NotImplementedException()
-        };
-    }
-
     private void ChangeCDRatio()
     {
-        var newIntensity = currentIntensity switch
+        currentIntensity = currentIntensity switch
         {
             CDIntensity.None => CDIntensity.Subtle,
             CDIntensity.Subtle => CDIntensity.Pronounced,
@@ -142,9 +82,23 @@ public class DungeonMasterBehaviour : MonoBehaviour
             _ => throw new System.NotImplementedException(),
         };
 
-        SwitchCDRatio(newIntensity);
+        NormalCD = currentIntensity switch
+        {
+            CDIntensity.None => null,
+            CDIntensity.Subtle => CDParams.Subtle,
+            CDIntensity.Pronounced => CDParams.Pronounced,
+            _ => throw new System.NotImplementedException()
+        };
 
-        var vibrateDuration = newIntensity switch
+        LoadedCD = currentIntensity switch
+        {
+            CDIntensity.None => null,
+            CDIntensity.Subtle => CDParams.Subtle_Loaded,
+            CDIntensity.Pronounced => CDParams.Pronounced_Loaded,
+            _ => throw new System.NotImplementedException()
+        };
+
+        var vibrateDuration = currentIntensity switch
         {
             CDIntensity.None => 0.1f,
             CDIntensity.Subtle => 0.5f,
@@ -152,20 +106,16 @@ public class DungeonMasterBehaviour : MonoBehaviour
             _ => throw new System.NotImplementedException(),
         };
 
-        Vibrate(leftHand, time: vibrateDuration);
+        Vibrate(Defs.LeftHand, time: vibrateDuration);
     }
 
     // Start is called before the first frame update
     void Start()
     {
-        SwitchCDRatio(CDIntensity.None);
-
         currentTask = null;
         pressedButton = null;
         BasicTask.SetActive(false);
         ShovellingTask.SetActive(false);
-        LeftHandModel.SetActive(false);
-        RightHandModel.SetActive(false);
     }
 
     // Update is called once per frame
@@ -174,30 +124,30 @@ public class DungeonMasterBehaviour : MonoBehaviour
         if (pressedButton != null)
         {
             //Only allow next press after pressed button is released
-            if (!OVRInput.Get(pressedButton.Value))
+            if (!Calc.IsPressed(pressedButton.Value))
             {
                 pressedButton = null;
             }
         }
-        else if (OVRInput.Get(buttonA))
+        else if (Calc.IsPressed(Defs.ButtonA))
         {
-            pressedButton = buttonA;
+            pressedButton = Defs.ButtonA;
             StartTask(BasicTask);
         }
-        else if (OVRInput.Get(buttonB))
+        else if (Calc.IsPressed(Defs.ButtonB))
         {
-            pressedButton = buttonB;
+            pressedButton = Defs.ButtonB;
             StartTask(ShovellingTask);
         }
-        else if (OVRInput.Get(buttonX))
+        else if (Calc.IsPressed(Defs.ButtonX))
         {
-            pressedButton = buttonX;
+            pressedButton = Defs.ButtonX;
             ChangeCDRatio();
         }
-        else if (OVRInput.Get(buttonY))
+        else if (Calc.IsPressed(Defs.ButtonY))
         {
-            pressedButton = buttonY;
-            ToggleHandVisibility();
+            pressedButton = Defs.ButtonY;
+            ToggleControllerVisibility();
         }
     }
 }

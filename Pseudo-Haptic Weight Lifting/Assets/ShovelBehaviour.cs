@@ -192,7 +192,7 @@ public class ShovelBehaviour : MonoBehaviour
             var cameraPosDiff = CameraRig.centerEyeAnchor.transform.position - headOrigin.position;
             var originPos = shovelOrigin.position + cameraPosDiff;
 
-            var cd = _shovelLoadRenderer.enabled ? DM.LoadedCDRatio : DM.NormalCDRatio;
+            var cd = _shovelLoadRenderer.enabled ? DM.LoadedCD : DM.NormalCD;
 
             var controllerPosDiff = primaryControllerPos - originPos;
             var targetPosDiff = cd == null ? controllerPosDiff : Vector3.Scale(controllerPosDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));

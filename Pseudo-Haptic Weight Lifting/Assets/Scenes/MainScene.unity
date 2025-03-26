@@ -290,12 +290,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1196530562}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &35860592 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 7239993999906927901, guid: f54012181eacade4ea242c65f804720f,
-    type: 3}
-  m_PrefabInstance: {fileID: 671721459}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &74741498
 GameObject:
   m_ObjectHideFlags: 0
@@ -962,12 +956,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1326349085}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &182199403 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3079314865701777818, guid: f54012181eacade4ea242c65f804720f,
-    type: 3}
-  m_PrefabInstance: {fileID: 671721459}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &185381085
 GameObject:
   m_ObjectHideFlags: 0
@@ -5531,8 +5519,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   BasicTask: {fileID: 1042631062}
   ShovellingTask: {fileID: 2100213796}
-  LeftHandModel: {fileID: 35860592}
-  RightHandModel: {fileID: 182199403}
+  LeftController: {fileID: 1446186550}
+  RightController: {fileID: 588481593}
 --- !u!1 &886412659
 GameObject:
   m_ObjectHideFlags: 0
@@ -11994,6 +11982,7 @@ GameObject:
   - component: {fileID: 1951715333}
   - component: {fileID: 1951715332}
   - component: {fileID: 1951715331}
+  - component: {fileID: 1951715336}
   m_Layer: 0
   m_Name: Loose Load
   m_TagString: Untagged
@@ -12114,6 +12103,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2100213797}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: -30}
+--- !u!114 &1951715336
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1951715330}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e974f880f491f8640a2a24a04bd8fb0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &1955115655
 GameObject:
   m_ObjectHideFlags: 0

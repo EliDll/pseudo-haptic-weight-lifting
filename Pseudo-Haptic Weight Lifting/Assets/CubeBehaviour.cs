@@ -127,7 +127,7 @@ public class CubeBehaviour : MonoBehaviour
             var headPosDiff = headCurrent.position - headOrigin.position;
             var originPos = controllerOrigin.position + headPosDiff;
 
-            var cd = DM.NormalCDRatio;
+            var cd = DM.NormalCD;
 
             var controllerPosDiff = controllerCurrent.position - originPos;
             var targetPosDiff = cd == null ? controllerPosDiff : Vector3.Scale(controllerPosDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
