@@ -68,6 +68,29 @@ public record CDParams
     };
 }
 
+public record SpinTwistVelocity
+{
+    /// <summary>
+    /// m/s
+    /// </summary>
+    public float linear;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float spin;
+    /// <summary>
+    /// deg/s
+    /// </summary>
+    public float twist;
+
+    public static SpinTwistVelocity Zero = new SpinTwistVelocity
+    {
+        linear = 0,
+        spin = 0,
+        twist = 0,
+    };
+}
+
 public static class Defs
 {
     public const OVRInput.Button LeftGrabButton = OVRInput.Button.PrimaryHandTrigger;

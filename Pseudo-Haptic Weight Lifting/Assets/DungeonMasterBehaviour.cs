@@ -15,36 +15,35 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private GameObject? currentTask;
 
-    private OVRInput.Button? pressedButton;
+    private OVRInput.Button pressedButton = OVRInput.Button.None;
+    private CDIntensity currentIntensity = CDIntensity.None;
 
     private bool showControllers = false;
 
-    private CDIntensity currentIntensity = CDIntensity.None;
-
-    public void Vibrate(OVRInput.Controller? controller, float time = 0.1f)
+    public void Vibrate(OVRInput.Controller controller, float time = 0.1f)
     {
         if (controller == Defs.LeftHand)
         {
-            startVib(controller.Value);
-            Invoke("stopleftVib", time);
+            StartVib(controller);
+            Invoke("StopleftVib", time);
         }
         else if (controller == Defs.RightHand)
         {
-            startVib(controller.Value);
-            Invoke("stopRightVib", time);
+            StartVib(controller);
+            Invoke("StopRightVib", time);
         }
     }
 
-    private void startVib(OVRInput.Controller controller)
+    private void StartVib(OVRInput.Controller controller)
     {
         OVRInput.SetControllerVibration(1, 1, controller);
     }
-    private void stopleftVib()
+    private void StopleftVib()
     {
         OVRInput.SetControllerVibration(0, 0, Defs.LeftHand);
     }
 
-    private void stopRightVib()
+    private void StopRightVib()
     {
         OVRInput.SetControllerVibration(0, 0, Defs.RightHand);
     }
@@ -113,7 +112,6 @@ public class DungeonMasterBehaviour : MonoBehaviour
     void Start()
     {
         currentTask = null;
-        pressedButton = null;
         BasicTask.SetActive(false);
         ShovellingTask.SetActive(false);
     }
@@ -121,12 +119,12 @@ public class DungeonMasterBehaviour : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (pressedButton != null)
+        if (pressedButton != OVRInput.Button.None)
         {
-            //Only allow next press after pressed button is released
-            if (!Calc.IsPressed(pressedButton.Value))
+            //Only register next press after pressed button is released
+            if (!Calc.IsPressed(pressedButton))
             {
-                pressedButton = null;
+                pressedButton = OVRInput.Button.None;
             }
         }
         else if (Calc.IsPressed(Defs.ButtonA))

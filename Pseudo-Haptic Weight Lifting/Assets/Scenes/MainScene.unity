@@ -2875,7 +2875,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 437156550}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1.1, y: 1.1, z: 1.1}
   m_ConstrainProportionsScale: 0
@@ -5855,10 +5855,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   DM: {fileID: 881892186}
   CameraRig: {fileID: 1012653693}
-  Cube: {fileID: 978039727}
-  CubeBoundary: {fileID: 437156550}
+  Parent: {fileID: 1042631062}
+  GrabObject: {fileID: 978039727}
+  GrabBoundary: {fileID: 437156550}
+  GrabbingHand: {fileID: 475268781}
   Barrier: {fileID: 1685703981}
-  Hand: {fileID: 475268781}
 --- !u!54 &978039729
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -12796,20 +12797,16 @@ MonoBehaviour:
   DM: {fileID: 881892186}
   CameraRig: {fileID: 1012653693}
   Parent: {fileID: 2100213796}
-  Shovel: {fileID: 2015771805}
-  ShovelLoad: {fileID: 6900973}
+  GrabObject: {fileID: 2015771805}
+  GrabBoundary: {fileID: 594635708}
+  GrabbingHand: {fileID: 805279033}
   ShovelBlade: {fileID: 2037277690}
-  ShovelBoundary: {fileID: 594635708}
+  ShovelLoad: {fileID: 6900973}
   LooseLoad: {fileID: 1951715330}
   Pile: {fileID: 1054362811}
   PileBoundary: {fileID: 1025532615}
-  PrimaryHand: {fileID: 805279033}
   SecondaryHand: {fileID: 1139005164}
-  DebugGreen: {fileID: 2096036277}
-  DebugYellow: {fileID: 1937919098}
-  DebugRed: {fileID: 129333316}
-  DebugOrange: {fileID: 703389909}
-  ActiveMaterial: {fileID: 2100000, guid: 5e60e5d3c619f514fad22a2e31b98775, type: 2}
+  CompletionMaterial: {fileID: 2100000, guid: 5e60e5d3c619f514fad22a2e31b98775, type: 2}
 --- !u!1 &2020437927
 GameObject:
   m_ObjectHideFlags: 0
