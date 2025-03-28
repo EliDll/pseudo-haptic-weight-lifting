@@ -5,18 +5,11 @@ using UnityEngine;
 
 public class CubeBehaviour : GrabBehaviour
 {
-    public GameObject Barrier;
+    public BasicTaskBehaviour Task;
 
     private Pose controllerOrigin;
     private Vector3 controllerToCube;
     private Vector3 cubeToController;
-
-    private bool IsColliding()
-    {
-        var cubeCollider = GrabObject.GetComponent<Collider>();
-        var barrierCollider = Barrier.GetComponent<Collider>();
-        return cubeCollider.bounds.Intersects(barrierCollider.bounds);
-    }
 
     protected override void OnStart()
     {
@@ -79,5 +72,7 @@ public class CubeBehaviour : GrabBehaviour
 
         var grabObjectRotDiff = next.rotation * Quaternion.Inverse(grabObjectOrigin.rotation);
         GrabbingHand.transform.SetPositionAndRotation(next.position + grabObjectRotDiff * cubeToController, grabObjectRotDiff * controllerOrigin.rotation);
+
+        Task.UpdateTask(GrabObject, grabbingController);
     }
 }
