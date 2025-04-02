@@ -20,6 +20,11 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private bool showControllers = false;
 
+    public bool ShowGhosts()
+    {
+        return showControllers;
+    }
+
     public void Vibrate(OVRInput.Controller controller, float time = 0.1f)
     {
         if (controller == Defs.LeftHand)

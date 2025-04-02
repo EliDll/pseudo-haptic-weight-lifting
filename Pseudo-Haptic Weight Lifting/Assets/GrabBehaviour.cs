@@ -10,6 +10,8 @@ public abstract class GrabBehaviour : MonoBehaviour
     public GameObject GrabObject;
     public GameObject GrabBoundary;
     public GameObject GrabbingHand;
+    public GameObject RealGhost;
+    public GameObject TargetGhost;
 
     protected OVRInput.Button grabbingButton = OVRInput.Button.None;
     protected OVRInput.Controller grabbingController = OVRInput.Controller.None;
@@ -27,9 +29,12 @@ public abstract class GrabBehaviour : MonoBehaviour
     protected abstract void OnStart();
     protected void Start()
     {
-        OnStart();
-
         GrabBoundary.GetComponent<Renderer>().enabled = false;
+
+        RealGhost.SetActive(false);
+        TargetGhost.SetActive(false);
+
+        OnStart();
     }
 
     private void Highlight()
@@ -91,6 +96,19 @@ public abstract class GrabBehaviour : MonoBehaviour
         OnStopGrabbing();
     }
 
+    private void HandleGhost(GameObject ghost, Pose pose)
+    {
+        if (DM.ShowGhosts())
+        {
+            if (!ghost.activeSelf) ghost.SetActive(true);
+            ghost.transform.SetPositionAndRotation(pose.position, pose.rotation);
+        }
+        else
+        {
+            if (ghost.activeSelf) ghost.SetActive(false);
+        }
+    }
+
     protected abstract CDParams? GetCD();
     protected abstract Pose GetTargetPose(CDParams? cd);
     protected abstract void OnContinueGrabbing(Pose next);
@@ -107,6 +125,13 @@ public abstract class GrabBehaviour : MonoBehaviour
         grabObjectVelocity = Calc.CalculateVelocity(from: current, to: next);
 
         grabObjectTravelDirection = Vector3.Normalize(next.position - current.position);
+
+        //Real ghost displays real world pose (no CDParams applied), if different from target pose
+        var realPose = GetTargetPose(null);
+        HandleGhost(RealGhost, realPose);
+
+        //Target ghost displays current target pose, if different from next pose
+        HandleGhost(TargetGhost, target);
 
         OnContinueGrabbing(next);
     }
