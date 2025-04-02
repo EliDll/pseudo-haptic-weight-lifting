@@ -114,14 +114,6 @@ public class ShovelBehaviour : GrabBehaviour
 
     protected override Pose GetTargetPose(CDParams? cd)
     {
-        var primaryCurrent = Calc.GetControllerPose(grabbingController);
-        var secondaryCurrent = Calc.GetControllerPose(secondaryController);
-
-        var controllersForward = Vector3.Normalize(secondaryCurrent.position - primaryCurrent.position);
-        var controllersUp = Vector3.Slerp(primaryCurrent.up, secondaryCurrent.up, 0.5f);
-
-        var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, controllersUp));
-
         var headCurrent = Calc.GetHeadPose(CameraRig);
         var headPosDiff = headCurrent.position - headOrigin.position;
 
@@ -131,6 +123,19 @@ public class ShovelBehaviour : GrabBehaviour
         var originForward = Quaternion.AngleAxis(45, originRightHorizontal) * originForwardHorizontal;
 
         var origin = new Pose(grabObjectOrigin.position + headPosDiff, Quaternion.LookRotation(originForward, grabObjectOrigin.up));
+
+        var primaryCurrent = Calc.GetControllerPose(grabbingController);
+        var secondaryCurrent = Calc.GetControllerPose(secondaryController);
+
+        var controllersForward = Vector3.Normalize(secondaryCurrent.position - primaryCurrent.position);
+
+        //Use right vector for roll to mitigate tilt influence
+        var rightToUp = Quaternion.AngleAxis(90, controllersForward);
+        var primaryRoll = rightToUp * primaryCurrent.right;
+        var secondaryRoll = rightToUp * secondaryCurrent.right;
+        var controllersRoll = primaryRoll * 0.5f + secondaryRoll * 0.5f;
+
+        var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, controllersRoll));
 
         ///Target Pos
         var posDiff = current.position - origin.position;
@@ -142,7 +147,7 @@ public class ShovelBehaviour : GrabBehaviour
         var scaledBetweenControllersDist = cd == null ? betweenControllersDist : betweenControllersDist * cd.HorizontalRatio;
 
         var leverageRatio = scaledBetweenControllersDist / (GRIPPABLE_SHAFT_LEN * 0.75f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
-        var forwardCD = Math.Min(leverageRatio * cd?.RotationalRatio ?? 1, 1.0f); //Clamp max CD ratio to one
+        var forwardCD = Math.Min(leverageRatio * (cd?.RotationalRatio ?? 1), 1.0f); //Clamp max CD ratio to one
         var targetForward = Vector3.Slerp(origin.forward, current.forward, forwardCD);
 
         ///Target Up
