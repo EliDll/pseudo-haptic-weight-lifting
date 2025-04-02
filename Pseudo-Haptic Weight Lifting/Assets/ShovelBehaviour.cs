@@ -96,7 +96,13 @@ public class ShovelBehaviour : GrabBehaviour
     {
         SecondaryHand.SetActive(true);
 
-        var secondary = primary == Defs.LeftHand ? Defs.RightHand : Defs.LeftHand;
+        var secondary = primary switch
+        {
+            Defs.LeftHand => Defs.RightHand,
+            Defs.RightHand => Defs.LeftHand,
+            _ => OVRInput.Controller.None
+        };
+
         secondaryController = secondary;
     }
 

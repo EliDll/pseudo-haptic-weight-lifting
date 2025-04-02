@@ -19,6 +19,12 @@ public class DungeonMasterBehaviour : MonoBehaviour
     private CDIntensity currentIntensity = CDIntensity.None;
 
     private bool showControllers = false;
+    private bool trackingEnabled = true;
+
+    public bool IsTrackingEnabled()
+    {
+        return trackingEnabled;
+    }
 
     public bool ShowGhosts()
     {
