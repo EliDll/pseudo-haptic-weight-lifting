@@ -2,7 +2,9 @@
 
 This repository contains the Unity VR application developed for my master thesis @ University of Innsbruck:
 
-## *Make me work for it* - Investigating the effect of pseudo-haptics on dynamic weight-lifting tasks in a virtual environment
+## Cool working title: PHLOAT - Pseudo-Haptic Lifiting for Objects and Ambidextrous Tools
+
+## Thesis: *Make me work for it* - Investigating the effect of pseudo-haptics on dynamic weight-lifting tasks in a virtual environment
 
 This thesis investigates the potential of pseudo-haptics to simulate weight and enhance physical exertion in virtual reality (VR) training scenarios. While VR is increasingly used for immersive training, the lack of realistic haptic feedback remains a challenge, particularly for tasks requiring kinesthetic interaction. Pseudo-haptic techniques, which leverage discrepancies between visual and physical inputs, can create haptic sensations and offer a promising alternative to scenario-specific hardware.
 
