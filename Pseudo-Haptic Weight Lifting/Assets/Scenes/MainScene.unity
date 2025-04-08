@@ -6430,7 +6430,7 @@ GameObject:
   - component: {fileID: 799910460}
   - component: {fileID: 799910462}
   m_Layer: 0
-  m_Name: Cube
+  m_Name: CubeGeometry
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7653,7 +7653,7 @@ GameObject:
   - component: {fileID: 978039729}
   - component: {fileID: 978039728}
   m_Layer: 0
-  m_Name: Grab Object (Cube)
+  m_Name: Cube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -7680,6 +7680,7 @@ MonoBehaviour:
   RealGhost: {fileID: 1474219985}
   TargetGhost: {fileID: 1047922388}
   Task: {fileID: 1042631064}
+  CubeGeometry: {fileID: 799910457}
 --- !u!54 &978039729
 Rigidbody:
   m_ObjectHideFlags: 0

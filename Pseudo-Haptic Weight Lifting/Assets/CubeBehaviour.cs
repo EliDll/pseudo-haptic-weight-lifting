@@ -6,6 +6,7 @@ using UnityEngine;
 public class CubeBehaviour : GrabBehaviour
 {
     public BasicTaskBehaviour Task;
+    public GameObject CubeGeometry;
 
     private Pose controllerOrigin;
     private Vector3 controllerToCube;
@@ -73,6 +74,6 @@ public class CubeBehaviour : GrabBehaviour
         var grabObjectRotDiff = next.rotation * Quaternion.Inverse(grabObjectOrigin.rotation);
         GrabbingHand.transform.SetPositionAndRotation(next.position + grabObjectRotDiff * cubeToController, grabObjectRotDiff * controllerOrigin.rotation);
 
-        Task.UpdateTask(GrabObject, grabbingController);
+        Task.UpdateTask(CubeGeometry, grabbingController);
     }
 }
