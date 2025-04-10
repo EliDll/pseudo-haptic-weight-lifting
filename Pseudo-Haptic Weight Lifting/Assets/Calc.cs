@@ -4,6 +4,16 @@ using UnityEngine;
 
 public static class Calc
 {
+    public static OVRInput.Button GetGrabButton(this GrabAnchor anchor)
+    {
+        return anchor switch
+        {
+            GrabAnchor.RightController => Defs.RightGrabButton,
+            GrabAnchor.LeftController => Defs.LeftGrabButton,
+            _ => OVRInput.Button.None
+        };
+    }
+
     public static bool IsPressed(OVRInput.Button button)
     {
         return OVRInput.Get(button);
@@ -28,7 +38,7 @@ public static class Calc
         return new Pose(transform.position, transform.rotation);
     }
 
-    public static Pose GetNextPose(Pose current, Pose target, SpinTwistVelocity currentVelocity, CDParams? cd)
+    public static Pose CalculateNextPose(Pose current, Pose target, SpinTwistVelocity currentVelocity, CDParams? cd)
     {
         //If no CD, move directly to targeet
         if (cd == null) return target;

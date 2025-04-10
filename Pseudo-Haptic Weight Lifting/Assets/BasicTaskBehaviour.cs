@@ -3,6 +3,13 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
+public enum TaskStep
+{
+    First,
+    Second,
+    Third
+}
+
 public class BasicTaskBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
@@ -35,7 +42,7 @@ public class BasicTaskBehaviour : MonoBehaviour
         ThirdBarrier.SetActive(false);
     }
 
-    public void UpdateTask(GameObject cube, OVRInput.Controller grabbingController)
+    public void UpdateTask(GameObject cube, GrabAnchor grabAnchor)
     {
         if (currentTarget != null)
         {
@@ -45,7 +52,7 @@ public class BasicTaskBehaviour : MonoBehaviour
             //Target is considered reached when cube centre is inside its collider
             if (targetCollider.bounds.Contains(cubePos))
             {
-                DM.Vibrate(grabbingController, 0.2f);
+                DM.TryVibrate(grabAnchor, 0.2f);
                 HandleTargetReached();
             }
             else if (!hasCollided && currentBarrier != null)
@@ -55,7 +62,7 @@ public class BasicTaskBehaviour : MonoBehaviour
 
                 if (barrierCollider.bounds.Intersects(cubeCollider.bounds))
                 {
-                    DM.Vibrate(grabbingController, 1.0f);
+                    DM.TryVibrate(grabAnchor, 1.0f);
                     HandleBarrierCollision();
                 }
             }

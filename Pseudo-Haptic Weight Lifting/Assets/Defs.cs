@@ -9,6 +9,15 @@ public enum CDIntensity
     Pronounced
 }
 
+public enum GrabAnchor
+{
+    LeftController,
+    RightController,
+    LeftHand,
+    RightHand,
+    None
+}
+
 public record CDParams
 {
     public float HorizontalRatio;
@@ -96,8 +105,8 @@ public static class Defs
     public const OVRInput.Button LeftGrabButton = OVRInput.Button.PrimaryHandTrigger;
     public const OVRInput.Button RightGrabButton = OVRInput.Button.SecondaryHandTrigger;
 
-    public const OVRInput.Controller LeftHand = OVRInput.Controller.LTouch;
-    public const OVRInput.Controller RightHand = OVRInput.Controller.RTouch;
+    public const OVRInput.Controller LeftController = OVRInput.Controller.LTouch;
+    public const OVRInput.Controller RightController = OVRInput.Controller.RTouch;
 
     public const OVRInput.Button ButtonA = OVRInput.Button.One;
     public const OVRInput.Button ButtonB = OVRInput.Button.Two;

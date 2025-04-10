@@ -10,6 +10,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public OVRControllerHelper LeftController;
     public OVRControllerHelper RightController;
 
+    public GameObject TrackedRightHand;
+    public GameObject TrackedLeftHand;
+
     public CDParams? NormalCD;
     public CDParams? LoadedCD;
 
@@ -31,16 +34,28 @@ public class DungeonMasterBehaviour : MonoBehaviour
         return showControllers;
     }
 
-    public void Vibrate(OVRInput.Controller controller, float time = 0.1f)
+    public Pose GetGrabAnchorPose(GrabAnchor anchor)
     {
-        if (controller == Defs.LeftHand)
+        return anchor switch
         {
-            StartVib(controller);
+            GrabAnchor.LeftController => Calc.GetControllerPose(Defs.LeftController),
+            GrabAnchor.RightController => Calc.GetControllerPose(Defs.RightController),
+            GrabAnchor.LeftHand => Calc.GetPose(TrackedLeftHand.transform),
+            GrabAnchor.RightHand => Calc.GetPose(TrackedRightHand.transform),
+            _ => new Pose()
+        };
+    }
+
+    public void TryVibrate(GrabAnchor anchor, float time = 0.1f)
+    {
+        if (anchor == GrabAnchor.LeftController)
+        {
+            StartVib(Defs.LeftController);
             Invoke("StopleftVib", time);
         }
-        else if (controller == Defs.RightHand)
+        else if (anchor == GrabAnchor.RightController)
         {
-            StartVib(controller);
+            StartVib(Defs.RightController);
             Invoke("StopRightVib", time);
         }
     }
@@ -51,12 +66,12 @@ public class DungeonMasterBehaviour : MonoBehaviour
     }
     private void StopleftVib()
     {
-        OVRInput.SetControllerVibration(0, 0, Defs.LeftHand);
+        OVRInput.SetControllerVibration(0, 0, Defs.LeftController);
     }
 
     private void StopRightVib()
     {
-        OVRInput.SetControllerVibration(0, 0, Defs.RightHand);
+        OVRInput.SetControllerVibration(0, 0, Defs.RightController);
     }
 
     public void ToggleControllerVisibility()
@@ -116,7 +131,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
             _ => throw new System.NotImplementedException(),
         };
 
-        Vibrate(Defs.LeftHand, time: vibrateDuration);
+        TryVibrate(GrabAnchor.LeftController, time: vibrateDuration);
     }
 
     // Start is called before the first frame update

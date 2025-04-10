@@ -8,23 +8,20 @@ public class CubeBehaviour : GrabBehaviour
     public BasicTaskBehaviour Task;
     public GameObject CubeGeometry;
 
-    private Pose controllerOrigin;
-    private Vector3 controllerToCube;
-    private Vector3 cubeToController;
+    private Vector3 grabAnchorToCube;
+    private Vector3 cubeToGrabAnchor;
 
     protected override void OnStart()
     {
 
     }
 
-    protected override void OnStartGrabbing(OVRInput.Controller controller)
+    protected override void OnStartGrabbing()
     {
-        var controllerPose = Calc.GetControllerPose(controller);
-        GrabbingHand.transform.SetPositionAndRotation(controllerPose.position, controllerPose.rotation); //Align hand visual with controller
-        controllerOrigin = controllerPose;
+        GrabbingHandVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with controller
 
-        controllerToCube = GrabObject.transform.position - GrabbingHand.transform.position;
-        cubeToController = controllerToCube * -1;
+        grabAnchorToCube = grabObjectOrigin.position - grabAnchorOrigin.position;
+        cubeToGrabAnchor = grabAnchorToCube * -1;
     }
 
     protected override void OnStopGrabbing()
@@ -37,32 +34,51 @@ public class CubeBehaviour : GrabBehaviour
         return DM.NormalCD;
     }
 
-    protected override Pose GetTargetPose(CDParams? cd)
+    private Pose GetScaledDiff(Pose origin, Pose current, CDParams? cd)
     {
-        var current = Calc.GetControllerPose(grabbingController);
-
         var headCurrent = Calc.GetHeadPose(CameraRig);
         var headPosDiff = headCurrent.position - headOrigin.position;
-
-        var origin = new Pose(controllerOrigin.position + headPosDiff, controllerOrigin.rotation);
+        var shiftedOrigin = new Pose(origin.position + headPosDiff, origin.rotation);
 
         ///Target Pos
-        var posDiff = current.position - origin.position;
+        var posDiff = current.position - shiftedOrigin.position;
         var scaledPosDiff = cd == null ? posDiff : Vector3.Scale(posDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
-        var targetPos = origin.position + scaledPosDiff;
+        var targetPos = shiftedOrigin.position + scaledPosDiff;
 
         ///Target Forward
-        var targetForward = cd == null ? current.forward : Vector3.Slerp(origin.forward, current.forward, cd.RotationalRatio);
+        var targetForward = cd == null ? current.forward : Vector3.Slerp(shiftedOrigin.forward, current.forward, cd.RotationalRatio);
 
         ///Target Up
-        var targetUp = cd == null ? current.up : Vector3.Slerp(origin.up, current.up, cd.RotationalRatio);
+        var targetUp = cd == null ? current.up : Vector3.Slerp(shiftedOrigin.up, current.up, cd.RotationalRatio);
 
-        //Note: Since target pose is defined in terms of the controller (grabbing hand) here, we must transform back to the grab object (cube)
+        return new Pose(targetPos, Quaternion.LookRotation(targetForward, targetUp));
+    }
 
-        var targetRot = Quaternion.LookRotation(targetForward, targetUp);
-        var controllerRotDiff = targetRot * Quaternion.Inverse(controllerOrigin.rotation);
+    protected override Pose GetTargetPose(CDParams? cd)
+    {
+        if (isTracking)
+        {
+            //Determine target pose based on tracked object
 
-        return new Pose(targetPos + controllerRotDiff * controllerToCube, controllerRotDiff * grabObjectOrigin.rotation);
+            var origin = grabObjectOrigin;
+            var current = Calc.GetPose(TrackedObject.transform);
+            var target = GetScaledDiff(origin: origin, current: current, cd);
+
+            return target;
+        }
+        else
+        {
+            //Determine target pose based on controller
+
+            var origin = grabAnchorOrigin;
+            var current = DM.GetGrabAnchorPose(grabAnchor);
+            var target = GetScaledDiff(origin: origin, current: current, cd);
+
+            //Note: Since target pose is defined in terms of the controller (grabbing hand) here, we must transform back to the grab object (cube)
+            var anchorRotDiff = target.rotation * Quaternion.Inverse(grabAnchorOrigin.rotation);
+            return new Pose(target.position + anchorRotDiff * grabAnchorToCube, anchorRotDiff * grabObjectOrigin.rotation);
+        }
+       
     }
 
     protected override void OnContinueGrabbing(Pose next)
@@ -70,10 +86,9 @@ public class CubeBehaviour : GrabBehaviour
         GrabObject.transform.SetPositionAndRotation(next.position, next.rotation);
 
         //Note: Since the next pose is defined in terms of the grab object (cube), we must transform back to the controller (grabbing hand)
-
         var grabObjectRotDiff = next.rotation * Quaternion.Inverse(grabObjectOrigin.rotation);
-        GrabbingHand.transform.SetPositionAndRotation(next.position + grabObjectRotDiff * cubeToController, grabObjectRotDiff * controllerOrigin.rotation);
+        GrabbingHandVisual.transform.SetPositionAndRotation(next.position + grabObjectRotDiff * cubeToGrabAnchor, grabObjectRotDiff * grabAnchorOrigin.rotation);
 
-        Task.UpdateTask(CubeGeometry, grabbingController);
+        Task.UpdateTask(CubeGeometry, grabAnchor);
     }
 }

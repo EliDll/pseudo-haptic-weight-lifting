@@ -11,15 +11,12 @@ public class ShovelBehaviour : GrabBehaviour
     public GameObject LooseLoad;
     public GameObject Pile;
     public GameObject PileBoundary;
-    public GameObject SecondaryHand;
 
     public Material CompletionMaterial;
 
-    private OVRInput.Controller secondaryController = OVRInput.Controller.None;
-
     private float shovelToBladeDist = 0;
 
-    private float betweenHandsDist = 0;
+    private float visualBetweenHandsDist = 0;
 
     private bool isLoaded = false;
 
@@ -27,8 +24,8 @@ public class ShovelBehaviour : GrabBehaviour
     {
         isLoaded = true;
 
-        DM.Vibrate(grabbingController);
-        DM.Vibrate(secondaryController);
+        DM.TryVibrate(grabAnchor);
+        DM.TryVibrate(secondaryAnchor);
 
         grabObjectVelocity = SpinTwistVelocity.Zero; //Reset velocity to simulate impact with pile
 
@@ -60,8 +57,8 @@ public class ShovelBehaviour : GrabBehaviour
     {
         isLoaded = false;
 
-        DM.Vibrate(grabbingController);
-        DM.Vibrate(secondaryController);
+        DM.TryVibrate(grabAnchor);
+        DM.TryVibrate(secondaryAnchor);
 
         ShovelLoad.GetComponent<Renderer>().enabled = false;
 
@@ -83,8 +80,6 @@ public class ShovelBehaviour : GrabBehaviour
 
     protected override void OnStart()
     {
-        SecondaryHand.SetActive(false);
-
         LooseLoad.SetActive(false); //Inactive object from which to instantiate loose loads on unload
 
         ShovelLoad.GetComponent<Renderer>().enabled = false;
@@ -92,25 +87,14 @@ public class ShovelBehaviour : GrabBehaviour
         shovelToBladeDist = Vector3.Magnitude(ShovelBlade.transform.position - GrabObject.transform.position);
     }
 
-    protected override void OnStartGrabbing(OVRInput.Controller primary)
+    protected override void OnStartGrabbing()
     {
-        SecondaryHand.SetActive(true);
 
-        var secondary = primary switch
-        {
-            Defs.LeftHand => Defs.RightHand,
-            Defs.RightHand => Defs.LeftHand,
-            _ => OVRInput.Controller.None
-        };
-
-        secondaryController = secondary;
     }
 
     protected override void OnStopGrabbing()
     {
-        SecondaryHand.SetActive(false);
 
-        secondaryController = OVRInput.Controller.None;
     }
 
     protected override CDParams? GetCD()
@@ -118,46 +102,32 @@ public class ShovelBehaviour : GrabBehaviour
         return isLoaded ? DM.LoadedCD : DM.NormalCD;
     }
 
-    protected override Pose GetTargetPose(CDParams? cd)
+    private Pose GetScaledDiff(Pose origin, Pose current, CDParams? cd, float betweenAnchorDist)
     {
         var headCurrent = Calc.GetHeadPose(CameraRig);
         var headPosDiff = headCurrent.position - headOrigin.position;
 
         //Rotate horiz forward vec 45 degrees downwards for "natural resting" shovel position
-        var originForwardHorizontal = Vector3.Normalize(new Vector3(x: grabObjectOrigin.forward.x, y: 0, z: grabObjectOrigin.forward.z));
-        var originRightHorizontal = Vector3.Normalize(new Vector3(x: grabObjectOrigin.forward.z, y: 0, z: -grabObjectOrigin.forward.x));
+        var originForwardHorizontal = Vector3.Normalize(new Vector3(x: origin.forward.x, y: 0, z: origin.forward.z));
+        var originRightHorizontal = Vector3.Normalize(new Vector3(x: origin.forward.z, y: 0, z: -origin.forward.x));
         var originForward = Quaternion.AngleAxis(45, originRightHorizontal) * originForwardHorizontal;
 
-        var origin = new Pose(grabObjectOrigin.position + headPosDiff, Quaternion.LookRotation(originForward, grabObjectOrigin.up));
-
-        var primaryCurrent = Calc.GetControllerPose(grabbingController);
-        var secondaryCurrent = Calc.GetControllerPose(secondaryController);
-
-        var controllersForward = Vector3.Normalize(secondaryCurrent.position - primaryCurrent.position);
-
-        //Use right vector for roll to mitigate tilt influence
-        var rightToUp = Quaternion.AngleAxis(90, controllersForward);
-        var primaryRoll = rightToUp * primaryCurrent.right;
-        var secondaryRoll = rightToUp * secondaryCurrent.right;
-        var controllersRoll = primaryRoll * 0.5f + secondaryRoll * 0.5f;
-
-        var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, controllersRoll));
+        var shiftedOrigin = new Pose(origin.position + headPosDiff, Quaternion.LookRotation(originForward, origin.up));
 
         ///Target Pos
-        var posDiff = current.position - origin.position;
+        var posDiff = current.position - shiftedOrigin.position;
         var scaledPosDiff = cd == null ? posDiff : Vector3.Scale(posDiff, new Vector3(x: cd.HorizontalRatio, y: cd.VerticalRatio, z: cd.HorizontalRatio));
-        var targetPos = origin.position + scaledPosDiff;
+        var targetPos = shiftedOrigin.position + scaledPosDiff;
 
-        ///Target Forward
-        var betweenControllersDist = Vector3.Magnitude(secondaryCurrent.position - primaryCurrent.position);
-        var scaledBetweenControllersDist = cd == null ? betweenControllersDist : betweenControllersDist * cd.HorizontalRatio;
+        ///Target Forward (uses Lever Metaphor)
+        var scaledBetweenHandsDist = cd == null ? betweenAnchorDist : betweenAnchorDist * cd.HorizontalRatio;
 
-        var leverageRatio = scaledBetweenControllersDist / (GRIPPABLE_SHAFT_LEN * 0.75f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
+        var leverageRatio = scaledBetweenHandsDist / (GRIPPABLE_SHAFT_LEN * 0.75f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
         var forwardCD = Math.Min(leverageRatio * (cd?.RotationalRatio ?? 1), 1.0f); //Clamp max CD ratio to one
-        var targetForward = Vector3.Slerp(origin.forward, current.forward, forwardCD);
+        var targetForward = Vector3.Slerp(shiftedOrigin.forward, current.forward, forwardCD);
 
         ///Target Up
-        var targetUp = cd == null ? current.up : Vector3.Slerp(origin.up, current.up, cd.RotationalRatio);
+        var targetUp = cd == null ? current.up : Vector3.Slerp(shiftedOrigin.up, current.up, cd.RotationalRatio);
 
         //Add clipping offset so that shovel blade does not clip
         var targetBladePos = targetPos + targetForward * shovelToBladeDist;
@@ -165,9 +135,47 @@ public class ShovelBehaviour : GrabBehaviour
         var clippingOffset = new Vector3(x: 0, y: clippingHeight, z: 0);
 
         //Add clipping height to visible hands distance to make second hand position when clipping less jarring (Note that this is not accurate when shovel is not pointing straight down)
-        betweenHandsDist = scaledBetweenControllersDist + clippingHeight;
+        visualBetweenHandsDist = scaledBetweenHandsDist + clippingHeight;
 
         return new Pose(targetPos + clippingOffset, Quaternion.LookRotation(targetForward, targetUp));
+    }
+
+    protected override Pose GetTargetPose(CDParams? cd)
+    {
+        var primaryCurrent = DM.GetGrabAnchorPose(grabAnchor);
+        var secondaryCurrent = DM.GetGrabAnchorPose(secondaryAnchor);
+
+        var betweenAnchorDist = Vector3.Magnitude(primaryCurrent.position - secondaryCurrent.position);
+
+        if (isTracking)
+        {
+            //Determine target pose based on tracked object
+
+            var origin = grabObjectOrigin;
+            var current = Calc.GetPose(TrackedObject.transform);
+
+            var target = GetScaledDiff(origin: origin, current: current, cd, betweenAnchorDist);
+            return target;
+        }
+        else
+        {
+            //Determine target pose based on controllers
+
+            var origin = grabObjectOrigin;
+
+            var controllersForward = Vector3.Normalize(secondaryCurrent.position - primaryCurrent.position);
+
+            //Use right vector for roll to mitigate tilt influence
+            var rightToUp = Quaternion.AngleAxis(90, controllersForward);
+            var primaryRoll = rightToUp * primaryCurrent.right;
+            var secondaryRoll = rightToUp * secondaryCurrent.right;
+            var controllersRoll = primaryRoll * 0.5f + secondaryRoll * 0.5f;
+
+            var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, controllersRoll));
+
+            var target = GetScaledDiff(origin: origin, current: current, cd, betweenAnchorDist);
+            return target;
+        }
     }
 
     protected override void OnContinueGrabbing(Pose next)
@@ -177,8 +185,8 @@ public class ShovelBehaviour : GrabBehaviour
 
         GrabObject.transform.SetPositionAndRotation(next.position, next.rotation);
 
-        GrabbingHand.transform.position = GrabObject.transform.position; //Place grabbing hand exactly on hilt
-        SecondaryHand.transform.position = GrabObject.transform.position + GrabObject.transform.forward * Math.Min(betweenHandsDist, GRIPPABLE_SHAFT_LEN); //Clamp secondary hand position to shaft
+        GrabbingHandVisual.transform.position = GrabObject.transform.position; //Place grabbing hand exactly on hilt
+        SecondaryHandVisual.transform.position = GrabObject.transform.position + GrabObject.transform.forward * Math.Min(visualBetweenHandsDist, GRIPPABLE_SHAFT_LEN); //Clamp secondary hand position to shaft
 
         //Update shovel load state
         if (isLoaded)
