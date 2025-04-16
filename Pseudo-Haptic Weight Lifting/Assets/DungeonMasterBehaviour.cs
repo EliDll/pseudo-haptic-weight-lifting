@@ -21,7 +21,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
     private OVRInput.Button pressedButton = OVRInput.Button.None;
     private CDIntensity currentIntensity = CDIntensity.None;
 
-    private bool showControllers = false;
+    private bool showControllers = true;
     private bool trackingEnabled = true;
 
     public bool IsTrackingEnabled()
@@ -31,7 +31,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     public bool ShowGhosts()
     {
-        return showControllers;
+        return false;
     }
 
     public Pose GetGrabAnchorPose(GrabAnchor anchor)
@@ -76,7 +76,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     public void ToggleControllerVisibility()
     {
-        showControllers = !showControllers;
+        //showControllers = !showControllers;
 
         if (showControllers)
         {
@@ -88,6 +88,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
             LeftController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
             RightController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
         }
+
+        trackingEnabled = !trackingEnabled;
     }
 
     private void StartTask(GameObject task)

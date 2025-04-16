@@ -107,12 +107,17 @@ public class ShovelBehaviour : GrabBehaviour
         var headCurrent = Calc.GetHeadPose(CameraRig);
         var headPosDiff = headCurrent.position - headOrigin.position;
 
-        //Rotate horiz forward vec 45 degrees downwards for "natural resting" shovel position
+        //Rotate horiz forward vec up to 45 degrees downwards for "natural resting" shovel position
         var originForwardHorizontal = Vector3.Normalize(new Vector3(x: origin.forward.x, y: 0, z: origin.forward.z));
         var originRightHorizontal = Vector3.Normalize(new Vector3(x: origin.forward.z, y: 0, z: -origin.forward.x));
-        var originForward = Quaternion.AngleAxis(45, originRightHorizontal) * originForwardHorizontal;
+
+        var heightRatio = Math.Min(current.position.y / GRIPPABLE_SHAFT_LEN, 1.0f); //Magic number!
+        var degreesToRotate = heightRatio * 45;
+
+        var originForward = Quaternion.AngleAxis(degreesToRotate, originRightHorizontal) * originForwardHorizontal;
 
         var shiftedOrigin = new Pose(origin.position + headPosDiff, Quaternion.LookRotation(originForward, origin.up));
+        //var shiftedOrigin = new Pose(origin.position + headPosDiff, origin.rotation);
 
         ///Target Pos
         var posDiff = current.position - shiftedOrigin.position;
@@ -135,9 +140,12 @@ public class ShovelBehaviour : GrabBehaviour
         var clippingOffset = new Vector3(x: 0, y: clippingHeight, z: 0);
 
         //Add clipping height to visible hands distance to make second hand position when clipping less jarring (Note that this is not accurate when shovel is not pointing straight down)
-        visualBetweenHandsDist = scaledBetweenHandsDist + clippingHeight;
+        //visualBetweenHandsDist = scaledBetweenHandsDist + clippingHeight;
+        visualBetweenHandsDist = scaledBetweenHandsDist;
 
-        return new Pose(targetPos + clippingOffset, Quaternion.LookRotation(targetForward, targetUp));
+        //return new Pose(targetPos + clippingOffset, Quaternion.LookRotation(targetForward, targetUp));
+
+        return new Pose(targetPos, Quaternion.LookRotation(targetForward, targetUp));
     }
 
     protected override Pose GetTargetPose(CDParams? cd)

@@ -52,7 +52,7 @@ public abstract class GrabBehaviour : MonoBehaviour
         if (DM.IsTrackingEnabled())
         {
             isTracking = true;
-            GrabObject.GetComponent<Rigidbody>().isKinematic = false; //ignore physiccs for rigidbody
+            GrabObject.GetComponent<Rigidbody>().isKinematic = true; //ignore physiccs for rigidbody entirely
         }
 
         OnStart();
@@ -184,36 +184,20 @@ public abstract class GrabBehaviour : MonoBehaviour
         OnContinueGrabbing(next);
     }
 
-    private bool TryStartGrabInteraction(GrabAnchor anchor)
+    private bool IsTouching(GrabAnchor anchor)
     {
         var grabBoundaryCollider = GrabBoundary.GetComponent<Collider>();
 
         var anchorPose = DM.GetGrabAnchorPose(anchor);
-        var isTouching = grabBoundaryCollider.bounds.Contains(anchorPose.position);
+        return grabBoundaryCollider.bounds.Contains(anchorPose.position);
+    }
 
-        if (isTouching)
-        {
-            if (!isHighlighted) Highlight();
+    private bool IsGrabbing(GrabAnchor anchor)
+    {
+        var button = Calc.GetGrabButton(anchor);
 
-            var button = Calc.GetGrabButton(anchor);
-
-            //If there is a grab button associated with given anchor, check if its pressed before starting grab interaction
-            if (button == OVRInput.Button.None || Calc.IsPressed(button))
-            {
-                StartGrabbing(anchor, button);
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            if (isHighlighted) Unhighlight();
-
-            return false;
-        }
+        //If there is a grab button associated with given anchor, check if its pressed before starting grab interaction
+        return button == OVRInput.Button.None || Calc.IsPressed(button);
     }
 
     private bool CheckEndGrabInteraction()
@@ -225,7 +209,9 @@ public abstract class GrabBehaviour : MonoBehaviour
             var grabBoundaryCollider = GrabBoundary.GetComponent<Collider>();
 
             var anchorPose = DM.GetGrabAnchorPose(grabAnchor);
-            var noLongerTouching = !grabBoundaryCollider.bounds.Contains(anchorPose.position);
+
+            var grabbingHandToTrackedObj = TrackedObject.transform.position - DM.GetGrabAnchorPose(grabAnchor).position;
+            var noLongerTouching = grabbingHandToTrackedObj.magnitude > 0.5f; //m
 
             return noLongerTouching;
         }
@@ -261,26 +247,45 @@ public abstract class GrabBehaviour : MonoBehaviour
 
             if (isTracking)
             {
-                var leftHandStarted = TryStartGrabInteraction(GrabAnchor.LeftHand);
-                if (!leftHandStarted)
+                if(IsTouching(GrabAnchor.LeftHand))
                 {
-                    var rightHandStarted = TryStartGrabInteraction(GrabAnchor.RightHand);
-                    if (!rightHandStarted)
-                    {
-                        //In tracking mode, apply tracked position while inactive
+                    StartGrabbing(GrabAnchor.LeftHand, OVRInput.Button.None);
+                }
+                else if (IsTouching(GrabAnchor.RightHand))
+                {
+                    StartGrabbing(GrabAnchor.RightHand, OVRInput.Button.None);
+                }
+                else
+                {
+                    //In tracking mode, apply tracked position while inactive
 
-                        var trackedPose = Calc.GetPose(TrackedObject.transform);
-                        var cd = GetCD();
-                        var next = GetNextPose(trackedPose, cd);
+                    var trackedPose = Calc.GetPose(TrackedObject.transform);
+                    var cd = GetCD();
+                    var next = GetNextPose(trackedPose, cd);
 
-                        GrabObject.transform.SetPositionAndRotation(next.position, next.rotation);
-                    }
+                    GrabObject.transform.SetPositionAndRotation(next.position, next.rotation);
                 }
             }
             else
             {
-                var leftControllerStarted = TryStartGrabInteraction(GrabAnchor.LeftController);
-                if(!leftControllerStarted) TryStartGrabInteraction(GrabAnchor.RightController);
+                var leftTouching = IsTouching(GrabAnchor.LeftController);
+                var rightTouching = IsTouching(GrabAnchor.RightController);
+                if (leftTouching || rightTouching)
+                {
+                    if(!isHighlighted) Highlight();
+                }
+                else
+                {
+                    if (isHighlighted) Unhighlight();
+                }
+
+                if(leftTouching && IsGrabbing(GrabAnchor.LeftController))
+                {
+                    StartGrabbing(GrabAnchor.LeftController, Calc.GetGrabButton(GrabAnchor.LeftController));
+                }else if(rightTouching && IsGrabbing(GrabAnchor.RightController))
+                {
+                    StartGrabbing(GrabAnchor.RightController, Calc.GetGrabButton(GrabAnchor.RightController));
+                }
             }
         }
     }
