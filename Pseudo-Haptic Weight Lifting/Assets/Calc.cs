@@ -16,7 +16,7 @@ public static class Calc
 
     public static bool IsPressed(OVRInput.Button button)
     {
-        return (OVRInput.activeControllerType == OVRInput.Controller.Touch || OVRInput.activeControllerType == OVRInput.Controller.LTouch || OVRInput.activeControllerType == OVRInput.Controller.RTouch) && OVRInput.Get(button);
+        return OVRInput.Get(button);
     }
 
     public static Pose GetControllerPose(OVRInput.Controller controller)

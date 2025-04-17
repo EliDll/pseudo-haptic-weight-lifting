@@ -5420,6 +5420,51 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetTranslation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetTranslation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _offsetTranslation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _disableYawFromSource
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _disableRollFromSource
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 356097551318541328, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      propertyPath: _disablePitchFromSource
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2483171112400622654, guid: f54012181eacade4ea242c65f804720f,
         type: 3}
       propertyPath: m_BackGroundColor.a
@@ -5599,6 +5644,10 @@ PrefabInstance:
         type: 3}
       insertIndex: 1
       addedObject: {fileID: 1012653689}
+    - targetCorrespondingSourceObject: {fileID: 2483171112401766338, guid: f54012181eacade4ea242c65f804720f,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1012653697}
     - targetCorrespondingSourceObject: {fileID: 2483171112401766336, guid: f54012181eacade4ea242c65f804720f,
         type: 3}
       insertIndex: -1
@@ -8062,6 +8111,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df9f338034892c44ebb62d97894772f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1012653697
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1012653688}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f77bc200897df4f4483b478b598b0c51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  StreamingClient: {fileID: 526398730}
+  RigidBodyId: 6
+  NetworkCompensation: 1
 --- !u!1 &1015236165
 GameObject:
   m_ObjectHideFlags: 0
