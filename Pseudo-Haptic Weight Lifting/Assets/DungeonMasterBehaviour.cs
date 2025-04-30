@@ -12,26 +12,23 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     public GameObject TrackedRightHand;
     public GameObject TrackedLeftHand;
+    public GameObject TrackedShovelGeometry;
+    public GameObject TrackedCube;
 
     public CDParams? NormalCD;
     public CDParams? LoadedCD;
 
     private GameObject? currentTask;
 
-    private OVRInput.Button pressedButton = OVRInput.Button.None;
+    private OVRInput.Button currentPressedButton = OVRInput.Button.None;
     private CDIntensity currentIntensity = CDIntensity.None;
 
-    private bool showControllers = true;
-    private bool trackingEnabled = true;
+    private bool showRealWorldObjects = false;
+    private bool trackingEnabled = false;
 
     public bool IsTrackingEnabled()
     {
         return trackingEnabled;
-    }
-
-    public bool ShowGhosts()
-    {
-        return false;
     }
 
     public Pose GetGrabAnchorPose(GrabAnchor anchor)
@@ -74,14 +71,20 @@ public class DungeonMasterBehaviour : MonoBehaviour
         OVRInput.SetControllerVibration(0, 0, Defs.RightController);
     }
 
-    public void ToggleControllerVisibility()
+    public void ToggleTracking(bool enabled)
     {
-        //showControllers = !showControllers;
+        trackingEnabled = enabled;
+    }
 
-        if (showControllers)
+    public void ToggleRealWorldObjects(bool show)
+    {
+        showRealWorldObjects = show;
+
+        if (showRealWorldObjects)
         {
             LeftController.m_showState = OVRInput.InputDeviceShowState.Always;
             RightController.m_showState = OVRInput.InputDeviceShowState.Always;
+
         }
         else
         {
@@ -89,7 +92,11 @@ public class DungeonMasterBehaviour : MonoBehaviour
             RightController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
         }
 
-        trackingEnabled = !trackingEnabled;
+        TrackedCube.GetComponent<Renderer>().enabled = showRealWorldObjects;
+        TrackedLeftHand.GetComponent<Renderer>().enabled = showRealWorldObjects;
+        TrackedRightHand.GetComponent<Renderer>().enabled = showRealWorldObjects;
+
+        TrackedShovelGeometry.SetActive(showRealWorldObjects);
     }
 
     private void StartTask(GameObject task)
@@ -136,44 +143,42 @@ public class DungeonMasterBehaviour : MonoBehaviour
         TryVibrate(GrabAnchor.LeftController, time: vibrateDuration);
     }
 
+    private bool CheckPress(OVRInput.Button button)
+    {
+        var isPressed = Calc.IsPressed(button);
+        if (isPressed) currentPressedButton = button;
+        return isPressed;
+    }
+
     // Start is called before the first frame update
     void Start()
     {
         currentTask = null;
         BasicTask.SetActive(false);
         ShovellingTask.SetActive(false);
+
+        ToggleRealWorldObjects(false);
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (pressedButton != OVRInput.Button.None)
+        if (currentPressedButton != OVRInput.Button.None)
         {
             //Only register next press after pressed button is released
-            if (!Calc.IsPressed(pressedButton))
+            if (!Calc.IsPressed(currentPressedButton))
             {
-                pressedButton = OVRInput.Button.None;
+                currentPressedButton = OVRInput.Button.None;
             }
         }
-        else if (Calc.IsPressed(Defs.ButtonA))
-        {
-            pressedButton = Defs.ButtonA;
-            StartTask(BasicTask);
-        }
-        else if (Calc.IsPressed(Defs.ButtonB))
-        {
-            pressedButton = Defs.ButtonB;
-            StartTask(ShovellingTask);
-        }
-        else if (Calc.IsPressed(Defs.ButtonX))
-        {
-            pressedButton = Defs.ButtonX;
-            ChangeCDRatio();
-        }
-        else if (Calc.IsPressed(Defs.ButtonY))
-        {
-            pressedButton = Defs.ButtonY;
-            ToggleControllerVisibility();
-        }
+        else if (CheckPress(Defs.ButtonA)) StartTask(BasicTask);
+
+        else if (CheckPress(Defs.ButtonB)) StartTask(ShovellingTask);
+
+        else if (CheckPress(Defs.ButtonX)) ChangeCDRatio();
+
+        else if (CheckPress(Defs.ButtonY)) ToggleRealWorldObjects(!showRealWorldObjects);
+
+        else if (CheckPress(Defs.LeftThumbstickPress)) ToggleTracking(!trackingEnabled);
     }
 }

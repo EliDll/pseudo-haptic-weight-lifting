@@ -18,7 +18,20 @@ public class CubeBehaviour : GrabBehaviour
 
     protected override void OnStartGrabbing()
     {
-        GrabbingHandVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with controller
+        if (primary == Primary.Left)
+        {
+            LeftHandGrabVisual.SetActive(true);
+            LeftHandGrabVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with anchor
+
+            LeftHandIdleVisual.SetActive(false);
+        }
+        else if (primary == Primary.Right)
+        {
+            RightHandGrabVisual.SetActive(true);
+            RightHandGrabVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with anchor
+
+            RightHandIdleVisual.SetActive(false);
+        }
 
         grabAnchorToCube = grabObjectOrigin.position - grabAnchorOrigin.position;
         cubeToGrabAnchor = grabAnchorToCube * -1;
@@ -26,7 +39,11 @@ public class CubeBehaviour : GrabBehaviour
 
     protected override void OnStopGrabbing()
     {
+        LeftHandIdleVisual.SetActive(true);
+        RightHandIdleVisual.SetActive(true);
 
+        LeftHandGrabVisual.SetActive(false);
+        RightHandGrabVisual.SetActive(false);
     }
 
     protected override CDParams? GetCD()
@@ -78,7 +95,7 @@ public class CubeBehaviour : GrabBehaviour
             var anchorRotDiff = target.rotation * Quaternion.Inverse(grabAnchorOrigin.rotation);
             return new Pose(target.position + anchorRotDiff * grabAnchorToCube, anchorRotDiff * grabObjectOrigin.rotation);
         }
-       
+
     }
 
     protected override void OnContinueGrabbing(Pose next)
@@ -87,7 +104,17 @@ public class CubeBehaviour : GrabBehaviour
 
         //Note: Since the next pose is defined in terms of the grab object (cube), we must transform back to the controller (grabbing hand)
         var grabObjectRotDiff = next.rotation * Quaternion.Inverse(grabObjectOrigin.rotation);
-        GrabbingHandVisual.transform.SetPositionAndRotation(next.position + grabObjectRotDiff * cubeToGrabAnchor, grabObjectRotDiff * grabAnchorOrigin.rotation);
+
+        var handPos = next.position + grabObjectRotDiff * cubeToGrabAnchor;
+        var handRot = grabObjectRotDiff * grabAnchorOrigin.rotation;
+
+        if(primary == Primary.Left)
+        {
+            LeftHandGrabVisual.transform.SetPositionAndRotation(handPos, handRot);
+        }else if(primary == Primary.Right)
+        {
+            RightHandGrabVisual.transform.SetPositionAndRotation(handPos, handRot);
+        }
 
         Task.UpdateTask(CubeGeometry, grabAnchor);
     }

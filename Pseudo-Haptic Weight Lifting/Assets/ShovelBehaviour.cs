@@ -30,6 +30,7 @@ public class ShovelBehaviour : GrabBehaviour
         grabObjectVelocity = SpinTwistVelocity.Zero; //Reset velocity to simulate impact with pile
 
         ShovelLoad.GetComponent<Renderer>().enabled = true;
+        ShovelLoad.GetComponent<AudioSource>().Play();
 
         var loadScale = ShovelLoad.transform.localScale;
         var currentPileScale = Pile.transform.localScale;
@@ -89,12 +90,20 @@ public class ShovelBehaviour : GrabBehaviour
 
     protected override void OnStartGrabbing()
     {
+        LeftHandIdleVisual.SetActive(false);
+        RightHandIdleVisual.SetActive(false);
 
+        LeftHandGrabVisual.SetActive(true);
+        RightHandGrabVisual.SetActive(true);
     }
 
     protected override void OnStopGrabbing()
     {
+        LeftHandIdleVisual.SetActive(true);
+        RightHandIdleVisual.SetActive(true);
 
+        LeftHandGrabVisual.SetActive(false);
+        RightHandGrabVisual.SetActive(false);
     }
 
     protected override CDParams? GetCD()
@@ -193,8 +202,21 @@ public class ShovelBehaviour : GrabBehaviour
 
         GrabObject.transform.SetPositionAndRotation(next.position, next.rotation);
 
-        GrabbingHandVisual.transform.position = GrabObject.transform.position; //Place grabbing hand exactly on hilt
-        SecondaryHandVisual.transform.position = GrabObject.transform.position + GrabObject.transform.forward * Math.Min(visualBetweenHandsDist, GRIPPABLE_SHAFT_LEN); //Clamp secondary hand position to shaft
+        var primaryPos = GrabObject.transform.position; //Place grabbing hand exactly on hilt
+        var secondaryPos = GrabObject.transform.position + GrabObject.transform.forward * Math.Min(visualBetweenHandsDist, GRIPPABLE_SHAFT_LEN); //Clamp secondary hand position to shaft
+
+        var primaryCurrent = DM.GetGrabAnchorPose(grabAnchor);
+        var secondaryCurrent = DM.GetGrabAnchorPose(secondaryAnchor);
+
+        if(primary == Primary.Left)
+        {
+            LeftHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
+            RightHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
+        }
+        else if (primary == Primary.Right){
+            RightHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
+            LeftHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
+        }
 
         //Update shovel load state
         if (isLoaded)

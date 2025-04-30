@@ -18,6 +18,13 @@ public enum GrabAnchor
     None
 }
 
+public enum Primary
+{
+    Left,
+    Right,
+    None
+}
+
 public record CDParams
 {
     public float HorizontalRatio;
@@ -112,4 +119,8 @@ public static class Defs
     public const OVRInput.Button ButtonB = OVRInput.Button.Two;
     public const OVRInput.Button ButtonX = OVRInput.Button.Three;
     public const OVRInput.Button ButtonY = OVRInput.Button.Four;
+
+    public const OVRInput.Button LeftMenuButton = OVRInput.Button.Start;
+    public const OVRInput.Button LeftThumbstickPress = OVRInput.Button.PrimaryThumbstick;
+    public const OVRInput.Button RightThumbstickPress = OVRInput.Button.SecondaryThumbstick;
 }

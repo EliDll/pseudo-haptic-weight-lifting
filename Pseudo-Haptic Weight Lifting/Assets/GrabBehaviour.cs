@@ -10,11 +10,10 @@ public abstract class GrabBehaviour : MonoBehaviour
     public GameObject GrabObject;
     public GameObject GrabBoundary;
 
-    public GameObject GrabbingHandVisual;
-    public GameObject SecondaryHandVisual;
-
-    public GameObject RealGhost;
-    public GameObject TargetGhost;
+    public GameObject LeftHandGrabVisual;
+    public GameObject RightHandGrabVisual;
+    public GameObject LeftHandIdleVisual;
+    public GameObject RightHandIdleVisual;
 
     public GameObject TrackedObject;
 
@@ -22,6 +21,7 @@ public abstract class GrabBehaviour : MonoBehaviour
 
     protected GrabAnchor grabAnchor = GrabAnchor.None;
     protected GrabAnchor secondaryAnchor = GrabAnchor.None;
+    protected Primary primary = Primary.None;
 
     protected Pose grabObjectOrigin;
     protected Pose grabAnchorOrigin;
@@ -40,13 +40,13 @@ public abstract class GrabBehaviour : MonoBehaviour
     protected abstract void OnStart();
     protected void Start()
     {
-        GrabbingHandVisual.SetActive(false);
-        SecondaryHandVisual.SetActive(false);
+        LeftHandGrabVisual.SetActive(false);
+        RightHandGrabVisual.SetActive(false);
+
+        LeftHandIdleVisual.SetActive(true);
+        RightHandIdleVisual.SetActive(true);
 
         GrabBoundary.GetComponent<Renderer>().enabled = false;
-
-        RealGhost.SetActive(false);
-        TargetGhost.SetActive(false);
 
         //Only check for tracking mode at startup
         if (DM.IsTrackingEnabled())
@@ -75,9 +75,6 @@ public abstract class GrabBehaviour : MonoBehaviour
     {
         isGrabbing = true;
 
-        GrabbingHandVisual.SetActive(true);
-        SecondaryHandVisual.SetActive(true);
-
         grabObjectVelocity = SpinTwistVelocity.Zero;
 
         Unhighlight();
@@ -85,12 +82,22 @@ public abstract class GrabBehaviour : MonoBehaviour
         grabButton = button;
 
         grabAnchor = anchor;
+
         secondaryAnchor = anchor switch {
             GrabAnchor.LeftController => GrabAnchor.RightController,
             GrabAnchor.RightController => GrabAnchor.LeftController,
             GrabAnchor.LeftHand => GrabAnchor.RightHand,
             GrabAnchor.RightHand => GrabAnchor.LeftHand,
             _ => GrabAnchor.None
+        };
+
+        primary = anchor switch
+        {
+            GrabAnchor.LeftController => Primary.Left,
+            GrabAnchor.RightController => Primary.Right,
+            GrabAnchor.LeftHand => Primary.Left,
+            GrabAnchor.RightHand => Primary.Right,
+            _ => Primary.None
         };
 
         grabAnchorOrigin = DM.GetGrabAnchorPose(grabAnchor);
@@ -113,9 +120,6 @@ public abstract class GrabBehaviour : MonoBehaviour
     {
         isGrabbing = false;
 
-        GrabbingHandVisual.SetActive(false);
-        SecondaryHandVisual.SetActive(false);
-
         if (!isTracking)
         {
             //Reactivate physics for grab object
@@ -133,21 +137,9 @@ public abstract class GrabBehaviour : MonoBehaviour
 
         grabAnchor = GrabAnchor.None;
         secondaryAnchor = GrabAnchor.None;
+        primary = Primary.None;
 
         OnStopGrabbing();
-    }
-
-    private void HandleGhost(GameObject ghost, Pose pose)
-    {
-        if (DM.ShowGhosts())
-        {
-            if (!ghost.activeSelf) ghost.SetActive(true);
-            ghost.transform.SetPositionAndRotation(pose.position, pose.rotation);
-        }
-        else
-        {
-            if (ghost.activeSelf) ghost.SetActive(false);
-        }
     }
 
     private Pose GetNextPose(Pose target, CDParams? cd)
@@ -159,13 +151,6 @@ public abstract class GrabBehaviour : MonoBehaviour
         grabObjectVelocity = Calc.CalculateVelocity(from: current, to: next);
 
         grabObjectTravelDirection = Vector3.Normalize(next.position - current.position);
-
-        //Real ghost displays real world pose (no CDParams applied), if different from target pose
-        var realPose = GetTargetPose(null);
-        HandleGhost(RealGhost, realPose);
-
-        //Target ghost displays current target pose, if different from next pose
-        HandleGhost(TargetGhost, target);
 
         return next;
     }
@@ -200,6 +185,15 @@ public abstract class GrabBehaviour : MonoBehaviour
         return button == OVRInput.Button.None || Calc.IsPressed(button);
     }
 
+    private void UpdateIdleHands()
+    {
+        var leftPose = DM.GetGrabAnchorPose(isTracking ? GrabAnchor.LeftHand : GrabAnchor.LeftController);
+        var rightPose = DM.GetGrabAnchorPose(isTracking ? GrabAnchor.RightHand : GrabAnchor.RightController);
+
+        LeftHandIdleVisual.transform.SetPositionAndRotation(leftPose.position, leftPose.rotation);
+        RightHandIdleVisual.transform.SetPositionAndRotation(rightPose.position, rightPose.rotation);
+    }
+
     private bool CheckEndGrabInteraction()
     {
         if (isTracking)
@@ -227,6 +221,8 @@ public abstract class GrabBehaviour : MonoBehaviour
 
     protected void Update()
     {
+        UpdateIdleHands(); //Always update idle hands, no matter if active or not (controlled by inheriting classes)
+
         if (isGrabbing)
         {
             //Grab object active: Check for grab interaction end or continue interaction
