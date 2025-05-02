@@ -21,14 +21,16 @@ public class CubeBehaviour : GrabBehaviour
         if (primary == Primary.Left)
         {
             LeftHandGrabVisual.SetActive(true);
-            LeftHandGrabVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with anchor
+            LeftHandGrabVisual.GetComponent<AudioSource>().Play();
+            LeftHandGrabVisual.transform.SetPositionAndRotation(LeftHandIdleVisual.transform.position, LeftHandIdleVisual.transform.rotation);
 
             LeftHandIdleVisual.SetActive(false);
         }
         else if (primary == Primary.Right)
         {
             RightHandGrabVisual.SetActive(true);
-            RightHandGrabVisual.transform.SetPositionAndRotation(grabAnchorOrigin.position, grabAnchorOrigin.rotation); //Align hand visual with anchor
+            RightHandGrabVisual.GetComponent<AudioSource>().Play();
+            RightHandGrabVisual.transform.SetPositionAndRotation(RightHandIdleVisual.transform.position, RightHandIdleVisual.transform.rotation);
 
             RightHandIdleVisual.SetActive(false);
         }
@@ -41,6 +43,15 @@ public class CubeBehaviour : GrabBehaviour
     {
         LeftHandIdleVisual.SetActive(true);
         RightHandIdleVisual.SetActive(true);
+
+        if (primary == Primary.Left)
+        {
+            LeftHandIdleVisual.GetComponent<AudioSource>().Play();
+        }
+        else if (primary == Primary.Right)
+        {
+            RightHandIdleVisual.GetComponent<AudioSource>().Play();
+        }
 
         LeftHandGrabVisual.SetActive(false);
         RightHandGrabVisual.SetActive(false);
@@ -81,6 +92,11 @@ public class CubeBehaviour : GrabBehaviour
             var current = Calc.GetPose(TrackedObject.transform);
             var target = GetScaledDiff(origin: origin, current: current, cd);
 
+            //Continuously update anchor position offset to not freeze it on initial grab collider collision
+            var currentAnchor = DM.GetGrabAnchorPose(grabAnchor);
+            grabAnchorToCube = current.position - currentAnchor.position;
+            cubeToGrabAnchor = grabAnchorToCube * -1;
+
             return target;
         }
         else
@@ -105,7 +121,8 @@ public class CubeBehaviour : GrabBehaviour
         //Note: Since the next pose is defined in terms of the grab object (cube), we must transform back to the controller (grabbing hand)
         var grabObjectRotDiff = next.rotation * Quaternion.Inverse(grabObjectOrigin.rotation);
 
-        var handPos = next.position + grabObjectRotDiff * cubeToGrabAnchor;
+
+        var handPos = next.position + (isTracking ? Quaternion.identity : grabObjectRotDiff) * cubeToGrabAnchor;
         var handRot = grabObjectRotDiff * grabAnchorOrigin.rotation;
 
         if(primary == Primary.Left)

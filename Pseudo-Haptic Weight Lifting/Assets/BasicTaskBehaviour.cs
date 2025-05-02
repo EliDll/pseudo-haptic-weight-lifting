@@ -3,13 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
-public enum TaskStep
-{
-    First,
-    Second,
-    Third
-}
-
 public class BasicTaskBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
@@ -24,6 +17,8 @@ public class BasicTaskBehaviour : MonoBehaviour
     public Material DefaultBarrierMaterial;
     public Material ActiveBarrierMatieral;
 
+    public Material CompletionMaterial;
+
     private GameObject? currentTarget;
     private GameObject? currentBarrier;
 
@@ -32,13 +27,14 @@ public class BasicTaskBehaviour : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        currentTarget = FirstTarget;
-        FirstTarget.SetActive(true);
+        FirstTarget.GetComponent<Renderer>().enabled = true;
 
-        SecondTarget.SetActive(false);
+        currentTarget = FirstTarget;
+
+        SecondTarget.GetComponent<Renderer>().enabled = false;
         SecondBarrier.SetActive(false);
 
-        ThirdTarget.SetActive(false);
+        ThirdTarget.GetComponent<Renderer>().enabled = false;
         ThirdBarrier.SetActive(false);
     }
 
@@ -72,7 +68,19 @@ public class BasicTaskBehaviour : MonoBehaviour
     private void HandleTargetReached()
     {
         //Disable current target and barrier
-        if (currentTarget != null) currentTarget.SetActive(false);
+        if (currentTarget != null)
+        {
+            currentTarget.GetComponent<AudioSource>().Play();
+
+            if(currentTarget == ThirdTarget)
+            {
+                currentTarget.GetComponent<Renderer>().material = CompletionMaterial;
+}
+            else
+            {
+                currentTarget.GetComponent<Renderer>().enabled = false;
+            }
+        }
         if (currentBarrier != null) currentBarrier.SetActive(false);
 
         if (currentTarget == FirstTarget)
@@ -92,7 +100,7 @@ public class BasicTaskBehaviour : MonoBehaviour
         }
 
         //Activate new target and barrier
-        if (currentTarget != null) currentTarget.SetActive(true);
+        if (currentTarget != null) currentTarget.GetComponent<Renderer>().enabled = true;
         if (currentBarrier != null)
         {
             currentBarrier.SetActive(true);
@@ -105,11 +113,12 @@ public class BasicTaskBehaviour : MonoBehaviour
     private void HandleBarrierCollision()
     {
         //Deactivate current target
-        if (currentTarget != null) currentTarget.SetActive(false);
+        if (currentTarget != null)currentTarget.GetComponent<Renderer>().enabled = false;
 
         //Set current barrier material to collided
         if (currentBarrier != null)
         {
+            currentBarrier.GetComponent<AudioSource>().Play();
             currentBarrier.GetComponent<Renderer>().material = ActiveBarrierMatieral;
             hasCollided = true;
         }
@@ -124,7 +133,7 @@ public class BasicTaskBehaviour : MonoBehaviour
         }
 
         //Activate new target
-        if (currentTarget != null) currentTarget.SetActive(true);
+        if (currentTarget != null) currentTarget.GetComponent<Renderer>().enabled = true;
     }
 
     // Update is called once per frame

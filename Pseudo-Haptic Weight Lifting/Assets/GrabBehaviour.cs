@@ -118,6 +118,8 @@ public abstract class GrabBehaviour : MonoBehaviour
     protected abstract void OnStopGrabbing();
     private void StopGrabbing()
     {
+        OnStopGrabbing();
+
         isGrabbing = false;
 
         if (!isTracking)
@@ -138,8 +140,6 @@ public abstract class GrabBehaviour : MonoBehaviour
         grabAnchor = GrabAnchor.None;
         secondaryAnchor = GrabAnchor.None;
         primary = Primary.None;
-
-        OnStopGrabbing();
     }
 
     private Pose GetNextPose(Pose target, CDParams? cd)

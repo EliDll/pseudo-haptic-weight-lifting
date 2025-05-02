@@ -76,6 +76,7 @@ public class ShovelBehaviour : GrabBehaviour
         {
             //Pile is fully shovelled, mark as completed through pile boundary object
             PileBoundary.GetComponent<Renderer>().material = CompletionMaterial;
+            PileBoundary.GetComponent<AudioSource>().Play();
         }
     }
 
@@ -95,12 +96,33 @@ public class ShovelBehaviour : GrabBehaviour
 
         LeftHandGrabVisual.SetActive(true);
         RightHandGrabVisual.SetActive(true);
+
+        LeftHandGrabVisual.transform.SetPositionAndRotation(LeftHandIdleVisual.transform.position, LeftHandIdleVisual.transform.rotation);
+        RightHandGrabVisual.transform.SetPositionAndRotation(RightHandIdleVisual.transform.position, RightHandIdleVisual.transform.rotation);
+
+        if (primary == Primary.Left)
+        {
+            LeftHandGrabVisual.GetComponent<AudioSource>().Play();
+        }
+        else if(primary == Primary.Right)
+        {
+            RightHandGrabVisual.GetComponent<AudioSource>().Play();
+        }
     }
 
     protected override void OnStopGrabbing()
     {
         LeftHandIdleVisual.SetActive(true);
         RightHandIdleVisual.SetActive(true);
+
+        if (primary == Primary.Left)
+        {
+            LeftHandIdleVisual.GetComponent<AudioSource>().Play();
+        }
+        else if (primary == Primary.Right)
+        {
+            RightHandIdleVisual.GetComponent<AudioSource>().Play();
+        }
 
         LeftHandGrabVisual.SetActive(false);
         RightHandGrabVisual.SetActive(false);
