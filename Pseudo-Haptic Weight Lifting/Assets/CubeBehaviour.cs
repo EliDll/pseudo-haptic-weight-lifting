@@ -151,11 +151,13 @@ public class CubeBehaviour : GrabBehaviour
 
             var log = new LogEntry
             {
+                PrimaryMode = primary,
                 PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
                 SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
                 PrimaryVisible = primaryVisible,
                 SecondaryVisible = secondaryVisible,
                 HMD = Calc.GetHeadPose(CameraRig).position,
+                EndEffectorVisible = GrabObject.transform.position,
                 ShovelLoaded = false, // n/a
                 CubeReachedTarget = targetReached,
                 GrabCount = grabCount,

@@ -282,11 +282,13 @@ public class ShovelBehaviour : GrabBehaviour
 
             var log = new LogEntry
             {
+                PrimaryMode = primary,
                 PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
                 SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
                 PrimaryVisible = primaryVisible,
                 SecondaryVisible = secondaryVisible,
                 HMD = Calc.GetHeadPose(CameraRig).position,
+                EndEffectorVisible = ShovelBlade.transform.position,
                 ShovelLoaded = isLoaded,
                 CubeReachedTarget = 0, // n/a,
                 GrabCount = grabCount,

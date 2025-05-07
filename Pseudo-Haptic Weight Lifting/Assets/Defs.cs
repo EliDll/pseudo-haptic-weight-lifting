@@ -90,11 +90,13 @@ public record CDParams
 
 public record LogEntry
 {
+    public Primary PrimaryMode;
     public Vector3 PrimaryTracked;
     public Vector3 SecondaryTracked;
     public Vector3 PrimaryVisible;
     public Vector3 SecondaryVisible;
     public Vector3 HMD;
+    public Vector3 EndEffectorVisible;
     public bool ShovelLoaded;
     public int CubeReachedTarget;
     public int GrabCount;
