@@ -20,8 +20,12 @@ public class ShovelBehaviour : GrabBehaviour
 
     private bool isLoaded = false;
 
+    private int loadToggleCount = 0;
+
     private void LoadBlade()
     {
+        loadToggleCount++;
+
         isLoaded = true;
 
         DM.TryVibrate(grabAnchor);
@@ -56,6 +60,8 @@ public class ShovelBehaviour : GrabBehaviour
 
     private void UnloadBlade(SpinTwistVelocity bladeVelocity)
     {
+        loadToggleCount++;
+
         isLoaded = false;
 
         DM.TryVibrate(grabAnchor);
@@ -158,7 +164,7 @@ public class ShovelBehaviour : GrabBehaviour
         ///Target Forward (uses Lever Metaphor)
         var scaledBetweenHandsDist = cd == null ? betweenAnchorDist : betweenAnchorDist * cd.HorizontalRatio;
 
-        var leverageRatio = scaledBetweenHandsDist / (GRIPPABLE_SHAFT_LEN * 0.75f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
+        var leverageRatio = scaledBetweenHandsDist / (GRIPPABLE_SHAFT_LEN * 0.66f); //"Full" leverage is achieved at fraction of total shaft length to promote exaggerated grip distance
         var forwardCD = Math.Min(leverageRatio * (cd?.RotationalRatio ?? 1), 1.0f); //Clamp max CD ratio to one
         var targetForward = Vector3.Slerp(shiftedOrigin.forward, current.forward, forwardCD);
 
@@ -260,6 +266,34 @@ public class ShovelBehaviour : GrabBehaviour
             var pileCollider = Pile.GetComponent<Collider>();
             var bladeInsidePile = pileCollider.bounds.Contains(ShovelBlade.transform.position); //Load when blade centre is inside pile
             if (bladeInsidePile) LoadBlade();
+        }
+    }
+
+    protected void FixedUpdate()
+    {
+        var completed = !Pile.activeSelf;
+
+        if (isGrabbing && !completed)
+        {
+            var leftVisible = LeftHandGrabVisual.transform.position;
+            var rightVisible = RightHandGrabVisual.transform.position;
+            var primaryVisible = primary == Primary.Left ? leftVisible : rightVisible;
+            var secondaryVisible = primary == Primary.Left ? rightVisible : leftVisible;
+
+            var log = new LogEntry
+            {
+                PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
+                SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
+                PrimaryVisible = primaryVisible,
+                SecondaryVisible = secondaryVisible,
+                HMD = Calc.GetHeadPose(CameraRig).position,
+                ShovelLoaded = isLoaded,
+                CubeReachedTarget = 0, // n/a,
+                GrabCount = grabCount,
+                CollisionCount = loadToggleCount //record load and unload events instead of collisions in this column
+            };
+
+            DM.Log(log);
         }
     }
 }

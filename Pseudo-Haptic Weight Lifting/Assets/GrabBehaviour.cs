@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
 #nullable enable
 
@@ -32,10 +33,12 @@ public abstract class GrabBehaviour : MonoBehaviour
 
     protected SpinTwistVelocity grabObjectVelocity = SpinTwistVelocity.Zero;
 
-    private bool isGrabbing = false;
     private bool isHighlighted = false;
 
+    protected bool isGrabbing = false;
     protected bool isTracking = false;
+
+    protected int grabCount = 0;
 
     protected abstract void OnStart();
     protected void Start()
@@ -73,6 +76,8 @@ public abstract class GrabBehaviour : MonoBehaviour
     protected abstract void OnStartGrabbing();
     private void StartGrabbing(GrabAnchor anchor, OVRInput.Button button)
     {
+        grabCount++;
+
         isGrabbing = true;
 
         grabObjectVelocity = SpinTwistVelocity.Zero;

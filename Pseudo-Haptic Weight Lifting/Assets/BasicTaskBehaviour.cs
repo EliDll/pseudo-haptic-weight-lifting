@@ -24,6 +24,10 @@ public class BasicTaskBehaviour : MonoBehaviour
 
     private bool hasCollided = false;
 
+    private int targetReached = 0;
+
+    private int collisionCount = 0;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -36,6 +40,16 @@ public class BasicTaskBehaviour : MonoBehaviour
 
         ThirdTarget.GetComponent<Renderer>().enabled = false;
         ThirdBarrier.SetActive(false);
+    }
+
+    public int GetTargetReached()
+    {
+        return targetReached;
+    }
+
+    public int GetCollisionCount()
+    {
+        return collisionCount;
     }
 
     public void UpdateTask(GameObject cube, GrabAnchor grabAnchor)
@@ -87,16 +101,19 @@ public class BasicTaskBehaviour : MonoBehaviour
         {
             currentTarget = SecondTarget;
             currentBarrier = SecondBarrier;
+            targetReached = 1;
         }
         else if (currentTarget == SecondTarget)
         {
             currentTarget = ThirdTarget;
             currentBarrier = ThirdBarrier;
+            targetReached = 2;
         }
         else if (currentTarget == ThirdTarget)
         {
             currentTarget = null;
             currentBarrier = null;
+            targetReached = 3;
         }
 
         //Activate new target and barrier
@@ -112,6 +129,8 @@ public class BasicTaskBehaviour : MonoBehaviour
 
     private void HandleBarrierCollision()
     {
+        collisionCount++;
+
         //Deactivate current target
         if (currentTarget != null)currentTarget.GetComponent<Renderer>().enabled = false;
 

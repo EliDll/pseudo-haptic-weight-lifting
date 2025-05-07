@@ -1,10 +1,17 @@
+using Oculus.Interaction.GrabAPI;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using TMPro;
 using UnityEngine;
 #nullable enable
 
 public class DungeonMasterBehaviour : MonoBehaviour
 {
+    public string LogDir;
+
     public GameObject BasicTask;
     public GameObject ShovellingTask;
     public OVRControllerHelper LeftController;
@@ -14,21 +21,26 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public GameObject TrackedLeftHand;
     public GameObject TrackedShovelGeometry;
     public GameObject TrackedCube;
+    public GameObject TrackedHMD;
+
+    public OVRCameraRig CameraRig;
+    public GameObject ConditionDisplay;
 
     public CDParams? NormalCD;
     public CDParams? LoadedCD;
 
     private GameObject? currentTask;
+    private Condition currentCondition = Condition.C0;
 
     private OVRInput.Button currentPressedButton = OVRInput.Button.None;
-    private CDIntensity currentIntensity = CDIntensity.None;
 
-    private bool showRealWorldObjects = false;
-    private bool trackingEnabled = false;
+    private bool showDebugObjects = false;
+
+    private StreamWriter? logWriter = null;
 
     public bool IsTrackingEnabled()
     {
-        return trackingEnabled;
+        return currentCondition == Condition.P0 || currentCondition == Condition.P1 || currentCondition == Condition.P2;
     }
 
     public Pose GetGrabAnchorPose(GrabAnchor anchor)
@@ -41,6 +53,72 @@ public class DungeonMasterBehaviour : MonoBehaviour
             GrabAnchor.RightHand => Calc.GetPose(TrackedRightHand.transform),
             _ => new Pose()
         };
+    }
+
+    private void InitLogger(string fileName)
+    {
+
+        var logFilePath = Path.Combine(LogDir, $"{fileName}.csv");
+
+        if (File.Exists(logFilePath)) File.Delete(logFilePath);
+
+        logWriter?.Dispose();
+
+        logWriter = new StreamWriter(logFilePath, true);
+
+        var logKeys = new string[] {
+            "TS.DT",
+            "TS.Unix",
+            "PT.X",
+            "PT.Y",
+            "PT.Z",
+            "ST.X",
+            "ST.Y",
+            "ST.Z",
+            "PV.X",
+            "PV.Y",
+            "PV.Z",
+            "SV.X",
+            "SV.Y",
+            "SV.Z",
+            "HMD.X",
+            "HMD.Y",
+            "HMD.Z",
+            "Loaded (Shovel)",
+            "Target Reached (Cube)",
+            "Grab Count",
+            "Collision Count"
+        };
+        logWriter.WriteLine(string.Join(",", logKeys));
+    }
+
+    public void Log(LogEntry e)
+    {
+        var values = new string[] {
+        DateTime.Now.ToString(),
+        DateTimeOffset.Now.ToUnixTimeMilliseconds().ToString(),
+        e.PrimaryTracked.x.ToString(),
+        e.PrimaryTracked.y.ToString(),
+        e.PrimaryTracked.z.ToString(),
+        e.SecondaryTracked.x.ToString(),
+        e.SecondaryTracked.y.ToString(),
+        e.SecondaryTracked.z.ToString(),
+        e.PrimaryVisible.x.ToString(),
+        e.PrimaryVisible.y.ToString(),
+        e.PrimaryVisible.z.ToString(),
+        e.SecondaryVisible.x.ToString(),
+        e.SecondaryVisible.y.ToString(),
+        e.SecondaryVisible.z.ToString(),
+        e.HMD.x.ToString(),
+        e.HMD.y.ToString(),
+        e.HMD.z.ToString(),
+        e.ShovelLoaded.ToString(),
+        e.CubeReachedTarget.ToString(),
+        e.GrabCount.ToString(),
+        e.CollisionCount.ToString(),
+        };
+
+        logWriter?.WriteLine(string.Join(",", values));
     }
 
     public void TryVibrate(GrabAnchor anchor, float time = 0.1f)
@@ -71,16 +149,11 @@ public class DungeonMasterBehaviour : MonoBehaviour
         OVRInput.SetControllerVibration(0, 0, Defs.RightController);
     }
 
-    public void ToggleTracking(bool enabled)
+    public void ToggleDebugObjects(bool show)
     {
-        trackingEnabled = enabled;
-    }
+        showDebugObjects = show;
 
-    public void ToggleRealWorldObjects(bool show)
-    {
-        showRealWorldObjects = show;
-
-        if (showRealWorldObjects)
+        if (showDebugObjects)
         {
             LeftController.m_showState = OVRInput.InputDeviceShowState.Always;
             RightController.m_showState = OVRInput.InputDeviceShowState.Always;
@@ -92,55 +165,64 @@ public class DungeonMasterBehaviour : MonoBehaviour
             RightController.m_showState = OVRInput.InputDeviceShowState.ControllerNotInHand;
         }
 
-        TrackedCube.GetComponent<Renderer>().enabled = showRealWorldObjects;
-        TrackedLeftHand.GetComponent<Renderer>().enabled = showRealWorldObjects;
-        TrackedRightHand.GetComponent<Renderer>().enabled = showRealWorldObjects;
+        TrackedCube.GetComponent<Renderer>().enabled = showDebugObjects;
+        TrackedLeftHand.GetComponent<Renderer>().enabled = showDebugObjects;
+        TrackedRightHand.GetComponent<Renderer>().enabled = showDebugObjects;
 
-        TrackedShovelGeometry.SetActive(showRealWorldObjects);
+        ConditionDisplay.SetActive(showDebugObjects);
+        TrackedShovelGeometry.SetActive(showDebugObjects);
     }
 
     private void StartTask(GameObject task)
     {
+        ToggleDebugObjects(false);
+
         if (currentTask != null) GameObject.Destroy(currentTask);
         currentTask = GameObject.Instantiate(task);
         currentTask.SetActive(true);
+
+        var logFileName = $"{(task == ShovellingTask ? "Shovel" : "Cube")}_{currentCondition}";
+        InitLogger(logFileName);
     }
 
-    private void ChangeCDRatio()
+    private void ChangeCondition()
     {
-        currentIntensity = currentIntensity switch
+        currentCondition = currentCondition switch
         {
-            CDIntensity.None => CDIntensity.Subtle,
-            CDIntensity.Subtle => CDIntensity.Pronounced,
-            CDIntensity.Pronounced => CDIntensity.None,
-            _ => throw new System.NotImplementedException(),
-        };
-
-        NormalCD = currentIntensity switch
-        {
-            CDIntensity.None => null,
-            CDIntensity.Subtle => CDParams.Subtle,
-            CDIntensity.Pronounced => CDParams.Pronounced,
+            Condition.C0 => Condition.C1,
+            Condition.C1 => Condition.C2,
+            Condition.C2 => Condition.P0,
+            Condition.P0 => Condition.P1,
+            Condition.P1 => Condition.P2,
+            Condition.P2 => Condition.C0,
             _ => throw new System.NotImplementedException()
         };
 
-        LoadedCD = currentIntensity switch
+        ConditionDisplay.GetComponent<TextMeshPro>().text = currentCondition.ToString();
+
+        NormalCD = currentCondition switch
         {
-            CDIntensity.None => null,
-            CDIntensity.Subtle => CDParams.Subtle_Loaded,
-            CDIntensity.Pronounced => CDParams.Pronounced_Loaded,
+            Condition.C0 => null,
+            Condition.C1 => CDParams.Subtle,
+            Condition.C2 => CDParams.Pronounced,
+            Condition.P0 => null,
+            Condition.P1 => CDParams.Subtle,
+            Condition.P2 => CDParams.Pronounced,
             _ => throw new System.NotImplementedException()
         };
 
-        var vibrateDuration = currentIntensity switch
+        LoadedCD = currentCondition switch
         {
-            CDIntensity.None => 0.1f,
-            CDIntensity.Subtle => 0.5f,
-            CDIntensity.Pronounced => 1.0f,
-            _ => throw new System.NotImplementedException(),
+            Condition.C0 => null,
+            Condition.C1 => CDParams.Subtle_Loaded,
+            Condition.C2 => CDParams.Pronounced_Loaded,
+            Condition.P0 => null,
+            Condition.P1 => CDParams.Subtle_Loaded,
+            Condition.P2 => CDParams.Pronounced_Loaded,
+            _ => throw new System.NotImplementedException()
         };
 
-        TryVibrate(GrabAnchor.LeftController, time: vibrateDuration);
+
     }
 
     private bool CheckPress(OVRInput.Button button)
@@ -157,12 +239,21 @@ public class DungeonMasterBehaviour : MonoBehaviour
         BasicTask.SetActive(false);
         ShovellingTask.SetActive(false);
 
-        ToggleRealWorldObjects(false);
+        ToggleDebugObjects(true);
+
+        ConditionDisplay.GetComponent<TextMeshPro>().text = currentCondition.ToString();
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (ConditionDisplay.activeSelf)
+        {
+            var head = Calc.GetHeadPose(CameraRig);
+            ConditionDisplay.transform.position = head.position + head.forward * 2.0f;
+            ConditionDisplay.transform.rotation = Quaternion.LookRotation(head.forward);
+        }
+
         if (currentPressedButton != OVRInput.Button.None)
         {
             //Only register next press after pressed button is released
@@ -175,10 +266,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
         else if (CheckPress(Defs.ButtonB)) StartTask(ShovellingTask);
 
-        else if (CheckPress(Defs.ButtonX)) ChangeCDRatio();
+        else if (CheckPress(Defs.LeftThumbstickPress)) ChangeCondition();
 
-        else if (CheckPress(Defs.ButtonY)) ToggleRealWorldObjects(!showRealWorldObjects);
-
-        else if (CheckPress(Defs.LeftThumbstickPress)) ToggleTracking(!trackingEnabled);
+        else if (CheckPress(Defs.RightThumbstickPress)) ToggleDebugObjects(!showDebugObjects);
     }
 }

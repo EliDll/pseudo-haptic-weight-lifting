@@ -1,13 +1,7 @@
-﻿using UnityEditor;
+﻿using System;
+using UnityEditor;
 using UnityEngine;
 #nullable enable
-
-public enum CDIntensity
-{
-    None,
-    Subtle,
-    Pronounced
-}
 
 public enum GrabAnchor
 {
@@ -23,6 +17,16 @@ public enum Primary
     Left,
     Right,
     None
+}
+
+public enum Condition
+{
+    C0,
+    C1,
+    C2,
+    P0,
+    P1,
+    P2
 }
 
 public record CDParams
@@ -82,6 +86,19 @@ public record CDParams
         SpinAcceleration = 315f,
         TwistAcceleration = 315f,
     };
+}
+
+public record LogEntry
+{
+    public Vector3 PrimaryTracked;
+    public Vector3 SecondaryTracked;
+    public Vector3 PrimaryVisible;
+    public Vector3 SecondaryVisible;
+    public Vector3 HMD;
+    public bool ShovelLoaded;
+    public int CubeReachedTarget;
+    public int GrabCount;
+    public int CollisionCount;
 }
 
 public record SpinTwistVelocity

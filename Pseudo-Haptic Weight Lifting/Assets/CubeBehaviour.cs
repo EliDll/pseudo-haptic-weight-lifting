@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -134,5 +135,34 @@ public class CubeBehaviour : GrabBehaviour
         }
 
         Task.UpdateTask(CubeGeometry, grabAnchor);
+    }
+
+    protected void FixedUpdate()
+    {
+        var targetReached = Task.GetTargetReached();
+        var completed = targetReached == 3;
+
+        if (isGrabbing && !completed)
+        {
+            var leftVisible = LeftHandGrabVisual.transform.position;
+            var rightVisible = RightHandGrabVisual.transform.position;
+            var primaryVisible = primary == Primary.Left ? leftVisible : rightVisible;
+            var secondaryVisible = primary == Primary.Left ? rightVisible : leftVisible;
+
+            var log = new LogEntry
+            {
+                PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
+                SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
+                PrimaryVisible = primaryVisible,
+                SecondaryVisible = secondaryVisible,
+                HMD = Calc.GetHeadPose(CameraRig).position,
+                ShovelLoaded = false, // n/a
+                CubeReachedTarget = targetReached,
+                GrabCount = grabCount,
+                CollisionCount = Task.GetCollisionCount()
+            };
+
+            DM.Log(log);
+        }
     }
 }
