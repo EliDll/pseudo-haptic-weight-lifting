@@ -139,7 +139,7 @@ public class CubeBehaviour : GrabBehaviour
 
     protected void FixedUpdate()
     {
-        var targetReached = Task.GetTargetReached();
+        var targetReached = Task.GetMaxTargetReached();
         var completed = targetReached == 3;
 
         if (isGrabbing && !completed)

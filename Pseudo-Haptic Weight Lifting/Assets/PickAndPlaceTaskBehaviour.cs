@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 #nullable enable
 
@@ -10,41 +12,48 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
     public GameObject FirstTarget;
     public GameObject SecondTarget;
     public GameObject ThirdTarget;
+    public GameObject FourthTarget;
 
-    public GameObject SecondBarrier;
-    public GameObject ThirdBarrier;
+    public GameObject[] FirstBarrier;
+    public GameObject[] SecondBarrier;
+    public GameObject[] ThirdBarrier;
+    public GameObject[] FourthBarrier;
 
     public Material DefaultBarrierMaterial;
     public Material ActiveBarrierMatieral;
 
     public Material CompletionMaterial;
 
-    private GameObject? currentTarget;
-    private GameObject? currentBarrier;
+    public int currentBarrier;
+    public int currentTarget;
 
-    private bool hasCollided = false;
-
-    private int targetReached = 0;
+    private bool hasAlreadyCollided = false;
 
     private int collisionCount = 0;
+    public int maxTargetReached = 0;
+
+    private GameObject[] allTargets;
+    private GameObject[] allBarriers;
 
     // Start is called before the first frame update
     void Start()
     {
-        FirstTarget.GetComponent<Renderer>().enabled = true;
+        allTargets = new GameObject[] { FirstTarget, SecondTarget, ThirdTarget, FourthTarget };
 
-        currentTarget = FirstTarget;
+        allBarriers = new GameObject[0];
+        allBarriers.AddRange(FirstBarrier);
+        allBarriers.AddRange(SecondBarrier);
+        allBarriers.AddRange(ThirdBarrier);
+        allBarriers.AddRange(FourthBarrier);
 
-        SecondTarget.GetComponent<Renderer>().enabled = false;
-        SecondBarrier.SetActive(false);
-
-        ThirdTarget.GetComponent<Renderer>().enabled = false;
-        ThirdBarrier.SetActive(false);
+        var next = 1;
+        SetTarget(next);
+        SetBarrier(next);
     }
 
-    public int GetTargetReached()
+    public int GetMaxTargetReached()
     {
-        return targetReached;
+        return maxTargetReached;
     }
 
     public int GetCollisionCount()
@@ -52,107 +61,111 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
         return collisionCount;
     }
 
+    public void SetTarget(int targetNo)
+    {
+        foreach(var obj in allTargets)
+        {
+            obj.GetComponent<Renderer>().enabled = false;
+        }
+
+        var newTarget = GetTarget(targetNo);
+
+        if (newTarget != null) newTarget.GetComponent<Renderer>().enabled = false;
+
+        currentTarget = targetNo;
+        if (maxTargetReached < targetNo) maxTargetReached = targetNo;
+    }
+
+    public void SetBarrier(int barrierNo)
+    {
+        foreach (var obj in allBarriers)
+        {
+            obj.SetActive(false);
+        }
+
+        var newBarrier = GetBarrier(barrierNo);
+
+        foreach(var obj in newBarrier)
+        {
+            obj.SetActive(true);
+            obj.GetComponent<Renderer>().material = DefaultBarrierMaterial;
+        }
+
+        currentBarrier = barrierNo;
+    }
+
+    public GameObject[] GetBarrier(int targetNo)
+    {
+        return targetNo switch
+        {
+            1 => FirstBarrier,
+            2 => SecondBarrier,
+            3 => ThirdBarrier,
+            4 => FourthBarrier,
+            _ => new GameObject[0]
+        };
+    }
+
+    public GameObject? GetTarget(int barrierNo)
+    {
+        return barrierNo switch
+        {
+            1 => FirstTarget,
+            2 => SecondTarget,
+            3 => ThirdTarget,
+            4 => FourthTarget,
+            _ => null
+        };
+    }
+
     public void UpdateTask(GameObject cube, GrabAnchor grabAnchor)
     {
-        if (currentTarget != null)
+        var target = GetTarget(currentTarget);
+
+        if (target != null)
         {
-            var targetCollider = currentTarget.GetComponent<Collider>();
             var cubePos = cube.transform.position;
 
-            //Target is considered reached when cube centre is inside its collider
-            if (targetCollider.bounds.Contains(cubePos))
+            var targetReached = target.GetComponent<Collider>().bounds.Contains(cubePos);
+
+            if (targetReached)
             {
                 DM.TryVibrate(grabAnchor, 0.2f);
-                HandleTargetReached();
-            }
-            else if (!hasCollided && currentBarrier != null)
-            {
-                var barrierCollider = currentBarrier.GetComponent<Collider>();
-                var cubeCollider = cube.GetComponent<Collider>();
+                target.GetComponent<AudioSource>().Play();
 
-                if (barrierCollider.bounds.Intersects(cubeCollider.bounds))
+                if (currentTarget == 4)
                 {
-                    DM.TryVibrate(grabAnchor, 1.0f);
-                    HandleBarrierCollision();
+                    target.GetComponent<Renderer>().material = CompletionMaterial;
+                }
+
+                var next = currentTarget + 1;
+                SetTarget(next);
+                SetBarrier(next);
+            }
+            else if (!hasAlreadyCollided)
+            {
+                var cubeCollider = cube.GetComponent<Collider>();
+                var barrierObjects = GetBarrier(currentBarrier);
+
+                foreach (var barrierObj in barrierObjects)
+                {
+                    if (barrierObj.GetComponent<Collider>().bounds.Intersects(cubeCollider.bounds))
+                    {
+                        DM.TryVibrate(grabAnchor, 1.0f);
+                        barrierObj.GetComponent<AudioSource>().Play();
+
+                        barrierObjects.Select(x => x.GetComponent<Renderer>().material = ActiveBarrierMatieral);
+
+                        collisionCount++;
+                        hasAlreadyCollided = true;
+
+                        SetTarget(currentTarget - 1);
+
+                        break;
+                    }
                 }
             }
         }
-    }
-
-    private void HandleTargetReached()
-    {
-        //Disable current target and barrier
-        if (currentTarget != null)
-        {
-            currentTarget.GetComponent<AudioSource>().Play();
-
-            if(currentTarget == ThirdTarget)
-            {
-                currentTarget.GetComponent<Renderer>().material = CompletionMaterial;
-}
-            else
-            {
-                currentTarget.GetComponent<Renderer>().enabled = false;
-            }
-        }
-        if (currentBarrier != null) currentBarrier.SetActive(false);
-
-        if (currentTarget == FirstTarget)
-        {
-            currentTarget = SecondTarget;
-            currentBarrier = SecondBarrier;
-            targetReached = 1;
-        }
-        else if (currentTarget == SecondTarget)
-        {
-            currentTarget = ThirdTarget;
-            currentBarrier = ThirdBarrier;
-            targetReached = 2;
-        }
-        else if (currentTarget == ThirdTarget)
-        {
-            currentTarget = null;
-            currentBarrier = null;
-            targetReached = 3;
-        }
-
-        //Activate new target and barrier
-        if (currentTarget != null) currentTarget.GetComponent<Renderer>().enabled = true;
-        if (currentBarrier != null)
-        {
-            currentBarrier.SetActive(true);
-            //Reset barrier material to normal
-            currentBarrier.GetComponent<Renderer>().material = DefaultBarrierMaterial;
-            hasCollided = false;
-        }
-    }
-
-    private void HandleBarrierCollision()
-    {
-        collisionCount++;
-
-        //Deactivate current target
-        if (currentTarget != null)currentTarget.GetComponent<Renderer>().enabled = false;
-
-        //Set current barrier material to collided
-        if (currentBarrier != null)
-        {
-            currentBarrier.GetComponent<AudioSource>().Play();
-            currentBarrier.GetComponent<Renderer>().material = ActiveBarrierMatieral;
-            hasCollided = true;
-        }
-
-        if (currentTarget == SecondTarget)
-        {
-            currentTarget = FirstTarget;
-        }
-        else if (currentTarget == ThirdTarget)
-        {
-            currentTarget = SecondTarget;
-        }
-
-        //Activate new target
-        if (currentTarget != null) currentTarget.GetComponent<Renderer>().enabled = true;
     }
 
     // Update is called once per frame
