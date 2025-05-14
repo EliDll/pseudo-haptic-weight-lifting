@@ -9600,7 +9600,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   LogDir: C:\Users\elias\Desktop
-  BasicTask: {fileID: 1042631062}
+  PickAndPlaceTask: {fileID: 1042631062}
   ShovellingTask: {fileID: 2100213796}
   LeftController: {fileID: 1446186550}
   RightController: {fileID: 588481593}
@@ -9609,6 +9609,8 @@ MonoBehaviour:
   TrackedShovelGeometry: {fileID: 532513862}
   TrackedCube: {fileID: 129861764}
   TrackedHMD: {fileID: 458614050}
+  InitialCondition: 2
+  InitialExperiment: 1
   CameraRig: {fileID: 1012653693}
   ConditionDisplay: {fileID: 716677612}
 --- !u!1 &886412659
@@ -11620,7 +11622,7 @@ GameObject:
   - component: {fileID: 1042631063}
   - component: {fileID: 1042631064}
   m_Layer: 0
-  m_Name: Basic Task
+  m_Name: Pick And Place Task
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -18304,8 +18306,8 @@ Transform:
   m_GameObject: {fileID: 1685703981}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.25, z: 0}
-  m_LocalScale: {x: 0.1, y: 0.5, z: 4}
+  m_LocalPosition: {x: 0, y: 0.375, z: 0}
+  m_LocalScale: {x: 0.1, y: 0.75, z: 4}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1042631063}

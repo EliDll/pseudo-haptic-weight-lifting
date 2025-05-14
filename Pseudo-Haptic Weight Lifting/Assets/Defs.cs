@@ -29,6 +29,13 @@ public enum Condition
     P2
 }
 
+public enum Experiment
+{
+    PickAndPlace,
+    Shovel,
+    None
+}
+
 public record CDParams
 {
     public float HorizontalRatio;
@@ -51,40 +58,40 @@ public record CDParams
     {
         HorizontalRatio = 0.9f,
         VerticalRatio = 0.8f,
-        RotationalRatio = 0.9f,
         Acceleration = 7f,
-        SpinAcceleration = 450f,
-        TwistAcceleration = 450f,
+        RotationalRatio = 0.9f,
+        SpinAcceleration = 630f,
+        TwistAcceleration = 720f,
     };
 
     public static CDParams Subtle_Loaded = new CDParams
     {
         HorizontalRatio = 0.85f,
         VerticalRatio = 0.75f,
-        RotationalRatio = 0.85f,
         Acceleration = 6f,
-        SpinAcceleration = 405f,
-        TwistAcceleration = 405f,
+        RotationalRatio = 0.85f,
+        SpinAcceleration = 540f,
+        TwistAcceleration = 630f,
     };
 
     public static CDParams Pronounced = new CDParams
     {
         HorizontalRatio = 0.8f,
         VerticalRatio = 0.7f,
-        RotationalRatio = 0.8f,
         Acceleration = 5f,
-        SpinAcceleration = 360f,
-        TwistAcceleration = 360f,
+        RotationalRatio = 0.8f,
+        SpinAcceleration = 450f,
+        TwistAcceleration = 540f,
     };
 
     public static CDParams Pronounced_Loaded = new CDParams
     {
         HorizontalRatio = 0.7f,
         VerticalRatio = 0.6f,
-        RotationalRatio = 0.7f,
         Acceleration = 4f,
-        SpinAcceleration = 315f,
-        TwistAcceleration = 315f,
+        RotationalRatio = 0.75f,
+        SpinAcceleration = 360f,
+        TwistAcceleration = 450f,
     };
 }
 

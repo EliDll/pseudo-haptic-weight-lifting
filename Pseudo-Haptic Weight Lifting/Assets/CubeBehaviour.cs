@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class CubeBehaviour : GrabBehaviour
 {
-    public BasicTaskBehaviour Task;
+    public PickAndPlaceTaskBehaviour Task;
     public GameObject CubeGeometry;
 
     private Vector3 grabAnchorToCube;

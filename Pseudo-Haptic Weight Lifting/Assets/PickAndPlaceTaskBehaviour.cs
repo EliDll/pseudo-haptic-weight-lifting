@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 #nullable enable
 
-public class BasicTaskBehaviour : MonoBehaviour
+public class PickAndPlaceTaskBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
 

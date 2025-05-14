@@ -19,6 +19,7 @@ public class ShovelBehaviour : GrabBehaviour
     private float visualBetweenHandsDist = 0;
 
     private bool isLoaded = false;
+    private bool isInsidePile = false;
 
     private int loadToggleCount = 0;
 
@@ -265,7 +266,26 @@ public class ShovelBehaviour : GrabBehaviour
         {
             var pileCollider = Pile.GetComponent<Collider>();
             var bladeInsidePile = pileCollider.bounds.Contains(ShovelBlade.transform.position); //Load when blade centre is inside pile
-            if (bladeInsidePile) LoadBlade();
+
+            if (isInsidePile)
+            {
+                //Update flag and ignore loading behaviour while still inside pile
+                isInsidePile = bladeInsidePile;
+            }
+            else if (bladeInsidePile)
+            {
+                isInsidePile = true;
+
+                var bladeToPileCentre = Pile.transform.position - ShovelBlade.transform.position;
+                var bladeForward = ShovelBlade.transform.right * -1;
+
+                var angleOfAttack = Vector3.Angle(bladeToPileCentre, bladeForward);
+
+                if(angleOfAttack <= 45)
+                {
+                    LoadBlade();
+                }
+            }
         }
     }
 

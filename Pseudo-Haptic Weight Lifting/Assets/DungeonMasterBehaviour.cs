@@ -12,7 +12,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
 {
     public string LogDir;
 
-    public GameObject BasicTask;
+    public GameObject PickAndPlaceTask;
     public GameObject ShovellingTask;
     public OVRControllerHelper LeftController;
     public OVRControllerHelper RightController;
@@ -23,6 +23,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public GameObject TrackedCube;
     public GameObject TrackedHMD;
 
+    public Condition InitialCondition;
+    public Experiment InitialExperiment;
+
     public OVRCameraRig CameraRig;
     public GameObject ConditionDisplay;
 
@@ -30,7 +33,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public CDParams? LoadedCD;
 
     private GameObject? currentTask;
-    private Condition currentCondition = Condition.C0;
+    private Condition currentCondition;
 
     private OVRInput.Button currentPressedButton = OVRInput.Button.None;
 
@@ -193,18 +196,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
         InitLogger(logFileName);
     }
 
-    private void ChangeCondition()
+    private void SetCondition(Condition condition)
     {
-        currentCondition = currentCondition switch
-        {
-            Condition.C0 => Condition.C1,
-            Condition.C1 => Condition.C2,
-            Condition.C2 => Condition.P0,
-            Condition.P0 => Condition.P1,
-            Condition.P1 => Condition.P2,
-            Condition.P2 => Condition.C0,
-            _ => throw new System.NotImplementedException()
-        };
+        currentCondition = condition;
 
         ConditionDisplay.GetComponent<TextMeshPro>().text = currentCondition.ToString();
 
@@ -229,8 +223,22 @@ public class DungeonMasterBehaviour : MonoBehaviour
             Condition.P2 => CDParams.Pronounced_Loaded,
             _ => throw new System.NotImplementedException()
         };
+    }
 
+    private void CycleCondition()
+    {
+        var newCondition = currentCondition switch
+        {
+            Condition.C0 => Condition.C1,
+            Condition.C1 => Condition.C2,
+            Condition.C2 => Condition.P0,
+            Condition.P0 => Condition.P1,
+            Condition.P1 => Condition.P2,
+            Condition.P2 => Condition.C0,
+            _ => throw new System.NotImplementedException()
+        };
 
+        SetCondition(newCondition);
     }
 
     private bool CheckPress(OVRInput.Button button)
@@ -244,10 +252,24 @@ public class DungeonMasterBehaviour : MonoBehaviour
     void Start()
     {
         currentTask = null;
-        BasicTask.SetActive(false);
+        PickAndPlaceTask.SetActive(false);
         ShovellingTask.SetActive(false);
 
-        ToggleDebugObjects(true);
+        SetCondition(InitialCondition);
+
+        if(InitialExperiment == Experiment.PickAndPlace)
+        {
+            StartTask(PickAndPlaceTask);
+        }
+        else if(InitialExperiment == Experiment.Shovel)
+        {
+            StartTask(ShovellingTask);
+        }
+        else
+        {
+            ToggleDebugObjects(true);
+        }
+       
 
         ConditionDisplay.GetComponent<TextMeshPro>().text = currentCondition.ToString();
     }
@@ -270,11 +292,11 @@ public class DungeonMasterBehaviour : MonoBehaviour
                 currentPressedButton = OVRInput.Button.None;
             }
         }
-        else if (CheckPress(Defs.ButtonA)) StartTask(BasicTask);
+        else if (CheckPress(Defs.ButtonA)) StartTask(PickAndPlaceTask);
 
         else if (CheckPress(Defs.ButtonB)) StartTask(ShovellingTask);
 
-        else if (CheckPress(Defs.LeftThumbstickPress)) ChangeCondition();
+        else if (CheckPress(Defs.LeftThumbstickPress)) CycleCondition();
 
         else if (CheckPress(Defs.RightThumbstickPress)) ToggleDebugObjects(!showDebugObjects);
     }
