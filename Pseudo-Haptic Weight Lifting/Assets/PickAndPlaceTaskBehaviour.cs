@@ -24,13 +24,13 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
 
     public Material CompletionMaterial;
 
-    public int currentBarrier;
-    public int currentTarget;
+    private int currentBarrier;
+    private int currentTarget;
 
     private bool hasAlreadyCollided = false;
 
     private int collisionCount = 0;
-    public int maxTargetReached = 0;
+    private int maxTargetReached = 0;
 
     private GameObject[] allTargets;
     private GameObject[] allBarriers;
@@ -40,11 +40,13 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
     {
         allTargets = new GameObject[] { FirstTarget, SecondTarget, ThirdTarget, FourthTarget };
 
-        allBarriers = new GameObject[0];
-        allBarriers.AddRange(FirstBarrier);
-        allBarriers.AddRange(SecondBarrier);
-        allBarriers.AddRange(ThirdBarrier);
-        allBarriers.AddRange(FourthBarrier);
+        var barriers = new List<GameObject>();
+        barriers.AddRange(FirstBarrier);
+        barriers.AddRange(SecondBarrier);
+        barriers.AddRange(ThirdBarrier);
+        barriers.AddRange(FourthBarrier);
+
+        allBarriers = barriers.ToArray();
 
         var next = 1;
         SetTarget(next);
@@ -63,17 +65,26 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
 
     public void SetTarget(int targetNo)
     {
-        foreach(var obj in allTargets)
-        {
-            obj.GetComponent<Renderer>().enabled = false;
-        }
-
         var newTarget = GetTarget(targetNo);
 
-        if (newTarget != null) newTarget.GetComponent<Renderer>().enabled = false;
+        if (newTarget != null)
+        {
+            foreach (var obj in allTargets)
+            {
+                obj.GetComponent<Renderer>().enabled = false;
+            }
+
+            newTarget.GetComponent<Renderer>().enabled = true;
+
+            if (maxTargetReached < targetNo) maxTargetReached = targetNo;
+        }
+        else
+        {
+            var target = GetTarget(currentTarget);
+            if(target != null ) target.GetComponent<Renderer>().material = CompletionMaterial;
+        }
 
         currentTarget = targetNo;
-        if (maxTargetReached < targetNo) maxTargetReached = targetNo;
     }
 
     public void SetBarrier(int barrierNo)
@@ -133,11 +144,7 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
                 DM.TryVibrate(grabAnchor, 0.2f);
                 target.GetComponent<AudioSource>().Play();
 
-                if (currentTarget == 4)
-                {
-                    target.GetComponent<Renderer>().material = CompletionMaterial;
-                }
-
+                hasAlreadyCollided = false;
                 var next = currentTarget + 1;
                 SetTarget(next);
                 SetBarrier(next);
@@ -154,7 +161,10 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
                         DM.TryVibrate(grabAnchor, 1.0f);
                         barrierObj.GetComponent<AudioSource>().Play();
 
-                        barrierObjects.Select(x => x.GetComponent<Renderer>().material = ActiveBarrierMatieral);
+                        foreach(var barrierObj2 in barrierObjects)
+                        {
+                            barrierObj2.GetComponent<Renderer>().material = ActiveBarrierMatieral;
+                        }
 
                         collisionCount++;
                         hasAlreadyCollided = true;
