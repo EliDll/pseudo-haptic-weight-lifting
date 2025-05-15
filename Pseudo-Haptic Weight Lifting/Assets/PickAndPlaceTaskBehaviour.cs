@@ -71,10 +71,16 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
         {
             foreach (var obj in allTargets)
             {
-                obj.GetComponent<Renderer>().enabled = false;
+                foreach (var renderer in obj.GetComponentsInChildren<Renderer>())
+                {
+                    renderer.enabled = false;
+                }
             }
 
-            newTarget.GetComponent<Renderer>().enabled = true;
+            foreach(var renderer in newTarget.GetComponentsInChildren<Renderer>())
+            {
+                renderer.enabled = true;
+            }
 
             if (maxTargetReached < targetNo) maxTargetReached = targetNo;
         }
@@ -141,7 +147,7 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
 
             if (targetReached)
             {
-                DM.TryVibrate(grabAnchor, 0.2f);
+                DM.TryVibrate(grabAnchor, 0.1f);
                 target.GetComponent<AudioSource>().Play();
 
                 hasAlreadyCollided = false;
@@ -158,7 +164,7 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
                 {
                     if (barrierObj.GetComponent<Collider>().bounds.Intersects(cubeCollider.bounds))
                     {
-                        DM.TryVibrate(grabAnchor, 1.0f);
+                        DM.TryVibrate(grabAnchor, 0.5f);
                         barrierObj.GetComponent<AudioSource>().Play();
 
                         foreach(var barrierObj2 in barrierObjects)
