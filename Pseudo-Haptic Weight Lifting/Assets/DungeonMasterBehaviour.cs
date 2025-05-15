@@ -23,9 +23,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public GameObject TrackedCube;
     public GameObject TrackedHMD;
 
-    public Condition InitialCondition;
-    public Experiment InitialExperiment;
-
+    public GameObject CameraRigObj;
     public OVRCameraRig CameraRig;
     public GameObject ConditionDisplay;
 
@@ -34,8 +32,6 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private GameObject? currentTask;
     private Condition currentCondition;
-
-    private OVRInput.Button currentPressedButton = OVRInput.Button.None;
 
     private bool showDebugObjects = false;
 
@@ -70,31 +66,31 @@ public class DungeonMasterBehaviour : MonoBehaviour
         logWriter = new StreamWriter(logFilePath, true);
 
         var logKeys = new string[] {
-            "TS.DT",
-            "TS.Unix",
-            "PrimaryMode",
-            "PT.X",
-            "PT.Y",
-            "PT.Z",
-            "ST.X",
-            "ST.Y",
-            "ST.Z",
-            "PV.X",
-            "PV.Y",
-            "PV.Z",
-            "SV.X",
-            "SV.Y",
-            "SV.Z",
-            "HMD.X",
-            "HMD.Y",
-            "HMD.Z",
-            "EE.X",
-            "EE.Y",
-            "EE.Z",
-            "Loaded (Shovel)",
-            "Target Reached (Cube)",
-            "Grab Count",
-            "Collision Count"
+            "ts_datetime",
+            "ts_unix_ms",
+            "primary_grab_hand",
+            "pt_x",
+            "pt_y",
+            "pt_z",
+            "st_x",
+            "st_y",
+            "st_z",
+            "pv_x",
+            "pv_y",
+            "pv_z",
+            "sv_x",
+            "sv_y",
+            "sv_z",
+            "hmd_x",
+            "hmd_y",
+            "hmd_z",
+            "ee_x",
+            "ee_y",
+            "ee_z",
+            "shovel_loaded_state",
+            "cube_max_target_reached",
+            "grab_count",
+            "collision_or_load_count"
         };
         logWriter.WriteLine(string.Join(",", logKeys));
     }
@@ -160,6 +156,18 @@ public class DungeonMasterBehaviour : MonoBehaviour
         OVRInput.SetControllerVibration(0, 0, Defs.RightController);
     }
 
+    private void ResetCamera(Vector3 targetPosition, float targetYRotation)
+    {
+        var centreEye = CameraRig.centerEyeAnchor.transform;
+
+        float currentRotY = centreEye.eulerAngles.y;
+        float difference = targetYRotation - currentRotY;
+        CameraRigObj.transform.Rotate(0, difference, 0);
+
+        Vector3 newPos = new Vector3(targetPosition.x - centreEye.position.x, 0, targetPosition.z - centreEye.position.z);
+        CameraRigObj.transform.position += newPos;
+    }
+
     public void ToggleDebugObjects(bool show)
     {
         showDebugObjects = show;
@@ -168,7 +176,6 @@ public class DungeonMasterBehaviour : MonoBehaviour
         {
             LeftController.m_showState = OVRInput.InputDeviceShowState.Always;
             RightController.m_showState = OVRInput.InputDeviceShowState.Always;
-
         }
         else
         {
@@ -184,16 +191,29 @@ public class DungeonMasterBehaviour : MonoBehaviour
         TrackedShovelGeometry.SetActive(showDebugObjects);
     }
 
-    private void StartTask(GameObject task)
+    private void StartTask(GameObject? task)
     {
-        ToggleDebugObjects(false);
-
         if (currentTask != null) GameObject.Destroy(currentTask);
-        currentTask = GameObject.Instantiate(task);
-        currentTask.SetActive(true);
 
-        var logFileName = $"{(task == ShovellingTask ? "Shovel" : "Cube")}_{currentCondition}";
-        InitLogger(logFileName);
+        if(task != null)
+        {
+            var targetPosition = TrackedHMD.transform.position;
+            var targetYRotation = TrackedHMD.transform.eulerAngles.y;
+
+            ResetCamera(targetPosition, targetYRotation);
+
+            ToggleDebugObjects(false);
+
+            currentTask = GameObject.Instantiate(task);
+            currentTask.SetActive(true);
+
+            var logFileName = $"{(task == ShovellingTask ? "Shovel" : "Cube")}_{currentCondition}";
+            InitLogger(logFileName);
+        }
+        else
+        {
+            ToggleDebugObjects(true);
+        }
     }
 
     private void SetCondition(Condition condition)
@@ -241,35 +261,13 @@ public class DungeonMasterBehaviour : MonoBehaviour
         SetCondition(newCondition);
     }
 
-    private bool CheckPress(OVRInput.Button button)
-    {
-        var isPressed = Calc.IsPressed(button);
-        if (isPressed) currentPressedButton = button;
-        return isPressed;
-    }
-
     // Start is called before the first frame update
     void Start()
     {
         currentTask = null;
         PickAndPlaceTask.SetActive(false);
         ShovellingTask.SetActive(false);
-
-        SetCondition(InitialCondition);
-
-        if(InitialExperiment == Experiment.PickAndPlace)
-        {
-            StartTask(PickAndPlaceTask);
-        }
-        else if(InitialExperiment == Experiment.Shovel)
-        {
-            StartTask(ShovellingTask);
-        }
-        else
-        {
-            ToggleDebugObjects(true);
-        }
-       
+        ToggleDebugObjects(true);
 
         ConditionDisplay.GetComponent<TextMeshPro>().text = currentCondition.ToString();
     }
@@ -277,6 +275,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        //Billboard behaviour
         if (ConditionDisplay.activeSelf)
         {
             var head = Calc.GetHeadPose(CameraRig);
@@ -284,20 +283,24 @@ public class DungeonMasterBehaviour : MonoBehaviour
             ConditionDisplay.transform.rotation = Quaternion.LookRotation(head.forward);
         }
 
-        if (currentPressedButton != OVRInput.Button.None)
-        {
-            //Only register next press after pressed button is released
-            if (!Calc.IsPressed(currentPressedButton))
-            {
-                currentPressedButton = OVRInput.Button.None;
-            }
-        }
-        else if (CheckPress(Defs.ButtonA)) StartTask(PickAndPlaceTask);
+        if (OVRInput.GetDown(Defs.ButtonA)) StartTask(PickAndPlaceTask);
 
-        else if (CheckPress(Defs.ButtonB)) StartTask(ShovellingTask);
+        else if (OVRInput.GetDown(Defs.ButtonB)) StartTask(ShovellingTask);
 
-        else if (CheckPress(Defs.LeftThumbstickPress)) CycleCondition();
+        else if (OVRInput.GetDown(Defs.LeftThumbstickPress)) CycleCondition();
 
-        else if (CheckPress(Defs.RightThumbstickPress)) ToggleDebugObjects(!showDebugObjects);
+        else if (OVRInput.GetDown(Defs.RightThumbstickPress)) ToggleDebugObjects(!showDebugObjects);
+
+        else if (Input.GetKeyDown(KeyCode.KeypadMinus)) StartTask(null);
+        else if (Input.GetKeyDown(KeyCode.KeypadPlus)) StartTask(PickAndPlaceTask);
+        else if (Input.GetKeyDown(KeyCode.KeypadEnter)) StartTask(ShovellingTask);
+
+        else if (Input.GetKeyDown(KeyCode.Keypad1)) SetCondition(Condition.C0);
+        else if (Input.GetKeyDown(KeyCode.Keypad2)) SetCondition(Condition.C1);
+        else if (Input.GetKeyDown(KeyCode.Keypad3)) SetCondition(Condition.C2);
+
+        else if (Input.GetKeyDown(KeyCode.Keypad4)) SetCondition(Condition.P0);
+        else if (Input.GetKeyDown(KeyCode.Keypad5)) SetCondition(Condition.P1);
+        else if (Input.GetKeyDown(KeyCode.Keypad6)) SetCondition(Condition.P2);
     }
 }

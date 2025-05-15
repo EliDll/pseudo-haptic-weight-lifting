@@ -22,7 +22,7 @@ public abstract class GrabBehaviour : MonoBehaviour
 
     protected GrabAnchor grabAnchor = GrabAnchor.None;
     protected GrabAnchor secondaryAnchor = GrabAnchor.None;
-    protected Primary primary = Primary.None;
+    protected PrimaryHand primaryHand = PrimaryHand.None;
 
     protected Pose grabObjectOrigin;
     protected Pose grabAnchorOrigin;
@@ -96,13 +96,13 @@ public abstract class GrabBehaviour : MonoBehaviour
             _ => GrabAnchor.None
         };
 
-        primary = anchor switch
+        primaryHand = anchor switch
         {
-            GrabAnchor.LeftController => Primary.Left,
-            GrabAnchor.RightController => Primary.Right,
-            GrabAnchor.LeftHand => Primary.Left,
-            GrabAnchor.RightHand => Primary.Right,
-            _ => Primary.None
+            GrabAnchor.LeftController => PrimaryHand.Left,
+            GrabAnchor.RightController => PrimaryHand.Right,
+            GrabAnchor.LeftHand => PrimaryHand.Left,
+            GrabAnchor.RightHand => PrimaryHand.Right,
+            _ => PrimaryHand.None
         };
 
         grabAnchorOrigin = DM.GetGrabAnchorPose(grabAnchor);
@@ -144,7 +144,7 @@ public abstract class GrabBehaviour : MonoBehaviour
 
         grabAnchor = GrabAnchor.None;
         secondaryAnchor = GrabAnchor.None;
-        primary = Primary.None;
+        primaryHand = PrimaryHand.None;
     }
 
     private Pose GetNextPose(Pose target, CDParams? cd)

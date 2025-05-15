@@ -12,7 +12,7 @@ public enum GrabAnchor
     None
 }
 
-public enum Primary
+public enum PrimaryHand
 {
     Left,
     Right,
@@ -97,7 +97,7 @@ public record CDParams
 
 public record LogEntry
 {
-    public Primary PrimaryMode;
+    public PrimaryHand PrimaryMode;
     public Vector3 PrimaryTracked;
     public Vector3 SecondaryTracked;
     public Vector3 PrimaryVisible;

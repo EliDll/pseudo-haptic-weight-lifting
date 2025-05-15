@@ -10481,7 +10481,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bebe235be207b4f4aac170dfc56cd20f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  LogDir: C:\Users\elias\Desktop
+  LogDir: C:\Users\elias\Desktop\Logs
   PickAndPlaceTask: {fileID: 1042631062}
   ShovellingTask: {fileID: 2100213796}
   LeftController: {fileID: 1446186550}
@@ -10491,8 +10491,7 @@ MonoBehaviour:
   TrackedShovelGeometry: {fileID: 532513862}
   TrackedCube: {fileID: 129861764}
   TrackedHMD: {fileID: 458614050}
-  InitialCondition: 3
-  InitialExperiment: 1
+  CameraRigObj: {fileID: 1012653688}
   CameraRig: {fileID: 1012653693}
   ConditionDisplay: {fileID: 716677612}
 --- !u!1 &886412659

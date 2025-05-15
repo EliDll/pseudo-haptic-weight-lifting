@@ -19,7 +19,7 @@ public class CubeBehaviour : GrabBehaviour
 
     protected override void OnStartGrabbing()
     {
-        if (primary == Primary.Left)
+        if (primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.SetActive(true);
             LeftHandGrabVisual.GetComponent<AudioSource>().Play();
@@ -27,7 +27,7 @@ public class CubeBehaviour : GrabBehaviour
 
             LeftHandIdleVisual.SetActive(false);
         }
-        else if (primary == Primary.Right)
+        else if (primaryHand == PrimaryHand.Right)
         {
             RightHandGrabVisual.SetActive(true);
             RightHandGrabVisual.GetComponent<AudioSource>().Play();
@@ -45,11 +45,11 @@ public class CubeBehaviour : GrabBehaviour
         LeftHandIdleVisual.SetActive(true);
         RightHandIdleVisual.SetActive(true);
 
-        if (primary == Primary.Left)
+        if (primaryHand == PrimaryHand.Left)
         {
             LeftHandIdleVisual.GetComponent<AudioSource>().Play();
         }
-        else if (primary == Primary.Right)
+        else if (primaryHand == PrimaryHand.Right)
         {
             RightHandIdleVisual.GetComponent<AudioSource>().Play();
         }
@@ -126,10 +126,10 @@ public class CubeBehaviour : GrabBehaviour
         var handPos = next.position + (isTracking ? Quaternion.identity : grabObjectRotDiff) * cubeToGrabAnchor;
         var handRot = grabObjectRotDiff * grabAnchorOrigin.rotation;
 
-        if(primary == Primary.Left)
+        if(primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.transform.SetPositionAndRotation(handPos, handRot);
-        }else if(primary == Primary.Right)
+        }else if(primaryHand == PrimaryHand.Right)
         {
             RightHandGrabVisual.transform.SetPositionAndRotation(handPos, handRot);
         }
@@ -146,12 +146,12 @@ public class CubeBehaviour : GrabBehaviour
         {
             var leftVisible = LeftHandGrabVisual.transform.position;
             var rightVisible = RightHandGrabVisual.transform.position;
-            var primaryVisible = primary == Primary.Left ? leftVisible : rightVisible;
-            var secondaryVisible = primary == Primary.Left ? rightVisible : leftVisible;
+            var primaryVisible = primaryHand == PrimaryHand.Left ? leftVisible : rightVisible;
+            var secondaryVisible = primaryHand == PrimaryHand.Left ? rightVisible : leftVisible;
 
             var log = new LogEntry
             {
-                PrimaryMode = primary,
+                PrimaryMode = primaryHand,
                 PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
                 SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
                 PrimaryVisible = primaryVisible,

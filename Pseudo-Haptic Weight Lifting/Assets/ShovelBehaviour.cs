@@ -107,11 +107,11 @@ public class ShovelBehaviour : GrabBehaviour
         LeftHandGrabVisual.transform.SetPositionAndRotation(LeftHandIdleVisual.transform.position, LeftHandIdleVisual.transform.rotation);
         RightHandGrabVisual.transform.SetPositionAndRotation(RightHandIdleVisual.transform.position, RightHandIdleVisual.transform.rotation);
 
-        if (primary == Primary.Left)
+        if (primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.GetComponent<AudioSource>().Play();
         }
-        else if(primary == Primary.Right)
+        else if(primaryHand == PrimaryHand.Right)
         {
             RightHandGrabVisual.GetComponent<AudioSource>().Play();
         }
@@ -122,11 +122,11 @@ public class ShovelBehaviour : GrabBehaviour
         LeftHandIdleVisual.SetActive(true);
         RightHandIdleVisual.SetActive(true);
 
-        if (primary == Primary.Left)
+        if (primaryHand == PrimaryHand.Left)
         {
             LeftHandIdleVisual.GetComponent<AudioSource>().Play();
         }
-        else if (primary == Primary.Right)
+        else if (primaryHand == PrimaryHand.Right)
         {
             RightHandIdleVisual.GetComponent<AudioSource>().Play();
         }
@@ -237,12 +237,12 @@ public class ShovelBehaviour : GrabBehaviour
         var primaryCurrent = DM.GetGrabAnchorPose(grabAnchor);
         var secondaryCurrent = DM.GetGrabAnchorPose(secondaryAnchor);
 
-        if(primary == Primary.Left)
+        if(primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
             RightHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
         }
-        else if (primary == Primary.Right){
+        else if (primaryHand == PrimaryHand.Right){
             RightHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
             LeftHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
         }
@@ -297,12 +297,12 @@ public class ShovelBehaviour : GrabBehaviour
         {
             var leftVisible = LeftHandGrabVisual.transform.position;
             var rightVisible = RightHandGrabVisual.transform.position;
-            var primaryVisible = primary == Primary.Left ? leftVisible : rightVisible;
-            var secondaryVisible = primary == Primary.Left ? rightVisible : leftVisible;
+            var primaryVisible = primaryHand == PrimaryHand.Left ? leftVisible : rightVisible;
+            var secondaryVisible = primaryHand == PrimaryHand.Left ? rightVisible : leftVisible;
 
             var log = new LogEntry
             {
-                PrimaryMode = primary,
+                PrimaryMode = primaryHand,
                 PrimaryTracked = DM.GetGrabAnchorPose(grabAnchor).position,
                 SecondaryTracked = DM.GetGrabAnchorPose(secondaryAnchor).position,
                 PrimaryVisible = primaryVisible,
