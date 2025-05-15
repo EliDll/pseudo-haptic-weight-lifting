@@ -10,7 +10,11 @@ public class ShovelBehaviour : GrabBehaviour
     public GameObject ShovelLoad;
     public GameObject LooseLoad;
     public GameObject Pile;
-    public GameObject PileBoundary;
+
+    public GameObject LeftDropZone;
+    public GameObject RightDropZone;
+
+    private GameObject? chosenDropZone;
 
     public Material CompletionMaterial;
 
@@ -19,56 +23,65 @@ public class ShovelBehaviour : GrabBehaviour
     private float visualBetweenHandsDist = 0;
 
     private bool isLoaded = false;
-    private bool isInsidePile = false;
+    private bool stillInsidePile = false;
 
-    private int loadToggleCount = 0;
+    private int loadCount = 0;
 
     private void LoadBlade()
     {
-        loadToggleCount++;
+        loadCount++;
 
         isLoaded = true;
 
         DM.TryVibrate(grabAnchor);
         DM.TryVibrate(secondaryAnchor);
 
-        grabObjectVelocity = SpinTwistVelocity.Zero; //Reset velocity to simulate impact with pile
+        //Slow down velocity to simulate impact with pile
+        var percetage = 0.33f;
+        grabObjectVelocity = new SpinTwistVelocity
+        {
+            linear = grabObjectVelocity.linear * percetage,
+            spin = grabObjectVelocity.spin * percetage,
+            twist = grabObjectVelocity.twist * percetage,
+        };
 
-        ShovelLoad.GetComponent<Renderer>().enabled = true;
         ShovelLoad.GetComponent<AudioSource>().Play();
 
-        var loadScale = ShovelLoad.transform.localScale;
-        var currentPileScale = Pile.transform.localScale;
-        var currentPilePos = Pile.transform.position;
+        //Delay rendering for more plausible pile interaction
+        Invoke("ShowStickyLoad", 0.25f);
 
-        var loadVolume = loadScale.x * loadScale.y * loadScale.z;
+        var delta = 0.05f;
 
-        var pileHeightDiff = loadVolume / (currentPileScale.x * currentPileScale.z);
-        var nextPileHeight = currentPileScale.y - pileHeightDiff;
+        Pile.transform.localScale += new Vector3(delta, delta, delta);
+        Pile.transform.position += new Vector3(0, -delta, 0);
 
-        var nextPileScale = new Vector3(x: currentPileScale.x, y: Math.Max(nextPileHeight, 0), z: currentPileScale.z);
-        var nextPilePos = new Vector3(x: currentPilePos.x, y: Math.Max(nextPileHeight * 0.5f, 0), z: currentPilePos.z);
-
-        Pile.transform.localScale = nextPileScale;
-        Pile.transform.position = nextPilePos;
-
-        if (Pile.transform.localScale.y < 0.05f)
+        if (-Pile.transform.position.y >= delta * 20)
         {
             //Pile is fully shovelled, disable pile object
             Pile.SetActive(false);
         }
     }
 
+    private void ShowStickyLoad()
+    {
+        ShovelLoad.GetComponent<Renderer>().enabled = true;
+        ShovelLoad.GetComponent<Collider>().enabled = true;
+    }
+
+    private void HideStickyLoad()
+    {
+        ShovelLoad.GetComponent<Renderer>().enabled = false;
+        ShovelLoad.GetComponent<Collider>().enabled = false;
+    }
+
     private void UnloadBlade(SpinTwistVelocity bladeVelocity)
     {
-        loadToggleCount++;
-
         isLoaded = false;
 
         DM.TryVibrate(grabAnchor);
         DM.TryVibrate(secondaryAnchor);
 
-        ShovelLoad.GetComponent<Renderer>().enabled = false;
+        HideStickyLoad();
 
         //Replace sticky load with rigidbody loose load
         var newLooseLoad = GameObject.Instantiate(LooseLoad, ShovelLoad.transform.position, ShovelLoad.transform.rotation, parent: Parent.transform);
@@ -79,11 +92,11 @@ public class ShovelBehaviour : GrabBehaviour
         var velocityVec = GrabObject.transform.up * bladeVelocity.linear;
         newRigidBody.AddForce(velocityVec, ForceMode.VelocityChange);
 
-        if (!Pile.activeSelf)
+        if (!Pile.activeSelf && chosenDropZone != null)
         {
-            //Pile is fully shovelled, mark as completed through pile boundary object
-            PileBoundary.GetComponent<Renderer>().material = CompletionMaterial;
-            PileBoundary.GetComponent<AudioSource>().Play();
+            //Pile is fully shovelled, mark drop zone as complete
+            chosenDropZone.GetComponent<Renderer>().material = CompletionMaterial;
+            chosenDropZone.GetComponent<AudioSource>().Play();
         }
     }
 
@@ -91,8 +104,9 @@ public class ShovelBehaviour : GrabBehaviour
     {
         LooseLoad.SetActive(false); //Inactive object from which to instantiate loose loads on unload
 
-        ShovelLoad.GetComponent<Renderer>().enabled = false;
+        HideStickyLoad();
 
+        //Determine once at runtime to be geo-independent
         shovelToBladeDist = Vector3.Magnitude(ShovelBlade.transform.position - GrabObject.transform.position);
     }
 
@@ -111,7 +125,7 @@ public class ShovelBehaviour : GrabBehaviour
         {
             LeftHandGrabVisual.GetComponent<AudioSource>().Play();
         }
-        else if(primaryHand == PrimaryHand.Right)
+        else if (primaryHand == PrimaryHand.Right)
         {
             RightHandGrabVisual.GetComponent<AudioSource>().Play();
         }
@@ -237,12 +251,13 @@ public class ShovelBehaviour : GrabBehaviour
         var primaryCurrent = DM.GetGrabAnchorPose(grabAnchor);
         var secondaryCurrent = DM.GetGrabAnchorPose(secondaryAnchor);
 
-        if(primaryHand == PrimaryHand.Left)
+        if (primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
             RightHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
         }
-        else if (primaryHand == PrimaryHand.Right){
+        else if (primaryHand == PrimaryHand.Right)
+        {
             RightHandGrabVisual.transform.SetPositionAndRotation(primaryPos, primaryCurrent.rotation);
             LeftHandGrabVisual.transform.SetPositionAndRotation(secondaryPos, secondaryCurrent.rotation);
         }
@@ -250,38 +265,56 @@ public class ShovelBehaviour : GrabBehaviour
         //Update shovel load state
         if (isLoaded)
         {
-            var pileBoundaryCollider = PileBoundary.GetComponent<Collider>();
-            var canUnload = !pileBoundaryCollider.bounds.Contains(ShovelBlade.transform.position); //Can only unload when blade centre is outside of pile boundary collider
-            if (canUnload)
+            var bladeTiltedDown = ShovelBlade.transform.up.y < 0; //Blade normal pointing downward enables unload
+            if (bladeTiltedDown)
             {
-                var shovelTiltedDown = GrabObject.transform.up.y < 0; //Shovel normal pointing downward triggers unload
-                if (shovelTiltedDown)
+                if (chosenDropZone != null)
                 {
-                    var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
-                    UnloadBlade(bladeVelocity);
+                    var insideDropZone = chosenDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
+                    if (insideDropZone)
+                    {
+                        var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
+                        UnloadBlade(bladeVelocity);
+                    }
+                }
+                else
+                {
+                    //Evaluate both drop zones and choose one on unload
+                    var insideLeftDropZone = LeftDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
+                    var insideRightDropZone = RightDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
+                    if (insideLeftDropZone || insideRightDropZone)
+                    {
+                        chosenDropZone = insideLeftDropZone ? LeftDropZone : RightDropZone;
+
+                        var otherDropZone = insideLeftDropZone ? RightDropZone : LeftDropZone;
+                        otherDropZone.SetActive(false);
+
+                        var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
+                        UnloadBlade(bladeVelocity);
+                    }
                 }
             }
+
         }
         else
         {
-            var pileCollider = Pile.GetComponent<Collider>();
-            var bladeInsidePile = pileCollider.bounds.Contains(ShovelBlade.transform.position); //Load when blade centre is inside pile
+            var bladeInsidePile = Pile.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position); //Load when blade centre is inside pile
 
-            if (isInsidePile)
+            if (stillInsidePile)
             {
-                //Update flag and ignore loading behaviour while still inside pile
-                isInsidePile = bladeInsidePile;
+                //Update and potentially reset flag (new angle of attack check only happens after exiting pile)
+                stillInsidePile = bladeInsidePile;
             }
             else if (bladeInsidePile)
             {
-                isInsidePile = true;
+                stillInsidePile = true;
 
                 var bladeToPileCentre = Pile.transform.position - ShovelBlade.transform.position;
                 var bladeForward = ShovelBlade.transform.right * -1;
 
                 var angleOfAttack = Vector3.Angle(bladeToPileCentre, bladeForward);
 
-                if(angleOfAttack <= 45)
+                if (angleOfAttack <= 45)
                 {
                     LoadBlade();
                 }
@@ -312,7 +345,7 @@ public class ShovelBehaviour : GrabBehaviour
                 ShovelLoaded = isLoaded,
                 CubeReachedTarget = 0, // n/a,
                 GrabCount = grabCount,
-                CollisionCount = loadToggleCount //record load and unload events instead of collisions in this column
+                CollisionCount = loadCount //record load and unload events instead of collisions in this column
             };
 
             DM.Log(log);

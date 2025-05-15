@@ -17,6 +17,9 @@ public class DungeonMasterBehaviour : MonoBehaviour
     public OVRControllerHelper LeftController;
     public OVRControllerHelper RightController;
 
+    public GameObject TrackedRightController;
+    public GameObject TrackedLeftController;
+
     public GameObject TrackedRightHand;
     public GameObject TrackedLeftHand;
     public GameObject TrackedShovelGeometry;
@@ -46,8 +49,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
     {
         return anchor switch
         {
-            GrabAnchor.LeftController => Calc.GetControllerPose(Defs.LeftController),
-            GrabAnchor.RightController => Calc.GetControllerPose(Defs.RightController),
+            GrabAnchor.LeftController => Calc.GetPose(TrackedLeftController.transform),
+            GrabAnchor.RightController => Calc.GetPose(TrackedRightController.transform),
             GrabAnchor.LeftHand => Calc.GetPose(TrackedLeftHand.transform),
             GrabAnchor.RightHand => Calc.GetPose(TrackedRightHand.transform),
             _ => new Pose()
