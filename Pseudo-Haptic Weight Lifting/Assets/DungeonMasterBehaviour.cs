@@ -60,9 +60,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
     private void InitLogger(string fileName)
     {
 
-        var logFilePath = Path.Combine(LogDir, $"{fileName}.csv");
-
-        if (File.Exists(logFilePath)) File.Delete(logFilePath);
+        var logFilePath = Path.Combine(LogDir, $"{fileName}_{DateTime.Now.ToString("dd-MM-yyyy-HH-mm-ss")}.csv");
+        
 
         logWriter?.Dispose();
 
@@ -167,7 +166,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
         float difference = targetYRotation - currentRotY;
         CameraRigObj.transform.Rotate(0, difference, 0);
 
-        Vector3 newPos = new Vector3(targetPosition.x - centreEye.position.x, 0, targetPosition.z - centreEye.position.z);
+        Vector3 newPos = new Vector3(targetPosition.x - centreEye.position.x, targetPosition.y - centreEye.position.y, targetPosition.z - centreEye.position.z);
         CameraRigObj.transform.position += newPos;
     }
 
