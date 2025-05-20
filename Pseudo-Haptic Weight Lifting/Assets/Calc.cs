@@ -19,14 +19,6 @@ public static class Calc
         return OVRInput.Get(button);
     }
 
-    public static Pose GetControllerPose(OVRInput.Controller controller)
-    {
-        var pos = OVRInput.GetLocalControllerPosition(controller);
-        var rot = OVRInput.GetLocalControllerRotation(controller);
-
-        return new Pose(pos, rot);
-    }
-
     public static Pose GetHeadPose(OVRCameraRig camera)
     {
         var centerEye = camera.centerEyeAnchor.transform;
@@ -72,13 +64,5 @@ public static class Calc
             spin = Vector3.Angle(to.forward, from.forward) / Time.deltaTime,  // deg/s
             twist = Vector3.Angle(to.up, from.up) / Time.deltaTime, // deg/s
         };
-    }
-
-    public static bool PoseAlike(Pose from, Pose to)
-    {
-        return Vector3.Distance(from.position, to.position) < 0.001f //1mm
-            && Vector3.Angle(from.forward, to.forward) < 0.1f //0.1deg
-            && Vector3.Angle(from.up, to.up) < 0.1f //0.1deg
-            ;
     }
 }

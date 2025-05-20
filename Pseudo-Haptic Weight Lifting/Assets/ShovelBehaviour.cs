@@ -324,9 +324,7 @@ public class ShovelBehaviour : GrabBehaviour
 
     protected void FixedUpdate()
     {
-        var completed = !Pile.activeSelf;
-
-        if (isGrabbing && !completed)
+        if (isGrabbing)
         {
             var leftVisible = LeftHandGrabVisual.transform.position;
             var rightVisible = RightHandGrabVisual.transform.position;

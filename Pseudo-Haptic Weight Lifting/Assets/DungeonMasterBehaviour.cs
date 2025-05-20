@@ -59,10 +59,8 @@ public class DungeonMasterBehaviour : MonoBehaviour
 
     private void InitLogger(string fileName)
     {
-
         var logFilePath = Path.Combine(LogDir, $"{fileName}_{DateTime.Now.ToString("dd-MM-yyyy-HH-mm-ss")}.csv");
         
-
         logWriter?.Dispose();
 
         logWriter = new StreamWriter(logFilePath, true);
@@ -94,6 +92,7 @@ public class DungeonMasterBehaviour : MonoBehaviour
             "grab_count",
             "collision_or_load_count"
         };
+
         logWriter.WriteLine(string.Join(",", logKeys));
     }
 

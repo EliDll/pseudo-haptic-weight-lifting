@@ -139,10 +139,7 @@ public class CubeBehaviour : GrabBehaviour
 
     protected void FixedUpdate()
     {
-        var targetReached = Task.GetMaxTargetReached();
-        var completed = targetReached == 4;
-
-        if (isGrabbing && !completed)
+        if (isGrabbing)
         {
             var leftVisible = LeftHandGrabVisual.transform.position;
             var rightVisible = RightHandGrabVisual.transform.position;
@@ -159,7 +156,7 @@ public class CubeBehaviour : GrabBehaviour
                 HMD = Calc.GetHeadPose(CameraRig).position,
                 EndEffectorVisible = GrabObject.transform.position,
                 ShovelLoaded = false, // n/a
-                CubeReachedTarget = targetReached,
+                CubeReachedTarget = Task.GetMaxTargetReached(),
                 GrabCount = grabCount,
                 CollisionCount = Task.GetCollisionCount()
             };
