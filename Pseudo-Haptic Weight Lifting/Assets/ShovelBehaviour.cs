@@ -309,7 +309,7 @@ public class ShovelBehaviour : GrabBehaviour
             {
                 stillInsidePile = true;
 
-                var bladeToPileCentre = Pile.transform.position - ShovelBlade.transform.position;
+                var bladeToPileCentre = new Vector3(x: Pile.transform.position.x, y: 0, z: Pile.transform.position.z) - ShovelBlade.transform.position;
                 var bladeForward = ShovelBlade.transform.right * -1;
 
                 var angleOfAttack = Vector3.Angle(bladeToPileCentre, bladeForward);
