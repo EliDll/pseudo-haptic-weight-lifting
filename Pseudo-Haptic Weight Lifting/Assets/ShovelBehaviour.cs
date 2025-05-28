@@ -14,7 +14,7 @@ public class ShovelBehaviour : GrabBehaviour
     public GameObject LeftDropZone;
     public GameObject RightDropZone;
 
-    private GameObject? chosenDropZone;
+    private GameObject? activeDropZone;
 
     public Material CompletionMaterial;
 
@@ -92,11 +92,11 @@ public class ShovelBehaviour : GrabBehaviour
         var velocityVec = GrabObject.transform.up * bladeVelocity.linear;
         newRigidBody.AddForce(velocityVec, ForceMode.VelocityChange);
 
-        if (!Pile.activeSelf && chosenDropZone != null)
+        if (!Pile.activeSelf && activeDropZone != null)
         {
             //Pile is fully shovelled, mark drop zone as complete
-            chosenDropZone.GetComponent<Renderer>().material = CompletionMaterial;
-            chosenDropZone.GetComponent<AudioSource>().Play();
+            activeDropZone.GetComponent<Renderer>().material = CompletionMaterial;
+            activeDropZone.GetComponent<AudioSource>().Play();
         }
     }
 
@@ -121,13 +121,20 @@ public class ShovelBehaviour : GrabBehaviour
         LeftHandGrabVisual.transform.SetPositionAndRotation(LeftHandIdleVisual.transform.position, LeftHandIdleVisual.transform.rotation);
         RightHandGrabVisual.transform.SetPositionAndRotation(RightHandIdleVisual.transform.position, RightHandIdleVisual.transform.rotation);
 
+        RightDropZone.SetActive(false);
+        LeftDropZone.SetActive(false);
+
         if (primaryHand == PrimaryHand.Left)
         {
             LeftHandGrabVisual.GetComponent<AudioSource>().Play();
+            activeDropZone = RightDropZone;
+            activeDropZone.SetActive(true);
         }
         else if (primaryHand == PrimaryHand.Right)
         {
             RightHandGrabVisual.GetComponent<AudioSource>().Play();
+            activeDropZone = LeftDropZone;
+            activeDropZone.SetActive(true);
         }
     }
 
@@ -229,9 +236,9 @@ public class ShovelBehaviour : GrabBehaviour
             var rightToUp = Quaternion.AngleAxis(90, controllersForward);
             var primaryRoll = rightToUp * primaryCurrent.right;
             var secondaryRoll = rightToUp * secondaryCurrent.right;
-            var controllersRoll = primaryRoll * 0.5f + secondaryRoll * 0.5f;
+            var combinedRoll = primaryRoll * 0.5f + secondaryRoll * 0.5f;
 
-            var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, controllersRoll));
+            var current = new Pose(primaryCurrent.position, Quaternion.LookRotation(controllersForward, primaryRoll));
 
             var target = GetScaledDiff(origin: origin, current: current, cd, betweenAnchorDist);
             return target;
@@ -266,35 +273,15 @@ public class ShovelBehaviour : GrabBehaviour
         if (isLoaded)
         {
             var bladeTiltedDown = ShovelBlade.transform.up.y < 0; //Blade normal pointing downward enables unload
-            if (bladeTiltedDown)
+            if (bladeTiltedDown && activeDropZone != null)
             {
-                if (chosenDropZone != null)
+                var insideDropZone = activeDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
+                if (insideDropZone)
                 {
-                    var insideDropZone = chosenDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
-                    if (insideDropZone)
-                    {
-                        var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
-                        UnloadBlade(bladeVelocity);
-                    }
-                }
-                else
-                {
-                    //Evaluate both drop zones and choose one on unload
-                    var insideLeftDropZone = LeftDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
-                    var insideRightDropZone = RightDropZone.GetComponent<Collider>().bounds.Contains(ShovelBlade.transform.position);
-                    if (insideLeftDropZone || insideRightDropZone)
-                    {
-                        chosenDropZone = insideLeftDropZone ? LeftDropZone : RightDropZone;
-
-                        var otherDropZone = insideLeftDropZone ? RightDropZone : LeftDropZone;
-                        otherDropZone.SetActive(false);
-
-                        var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
-                        UnloadBlade(bladeVelocity);
-                    }
+                    var bladeVelocity = Calc.CalculateVelocity(from: currentBlade, to: Calc.GetPose(ShovelBlade.transform));
+                    UnloadBlade(bladeVelocity);
                 }
             }
-
         }
         else
         {
