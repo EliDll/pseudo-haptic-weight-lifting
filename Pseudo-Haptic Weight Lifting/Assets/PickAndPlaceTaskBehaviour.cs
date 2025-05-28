@@ -9,6 +9,7 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
 {
     public DungeonMasterBehaviour DM;
 
+    public GameObject Origin;
     public GameObject FirstTarget;
     public GameObject SecondTarget;
     public GameObject ThirdTarget;
@@ -18,6 +19,8 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
     public GameObject[] SecondBarrier;
     public GameObject[] ThirdBarrier;
     public GameObject[] FourthBarrier;
+
+    public GameObject RoomDividerBarrier;
 
     public Material DefaultBarrierMaterial;
     public Material ActiveBarrierMatieral;
@@ -38,7 +41,7 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        allTargets = new GameObject[] { FirstTarget, SecondTarget, ThirdTarget, FourthTarget };
+        allTargets = new GameObject[] { Origin, FirstTarget, SecondTarget, ThirdTarget, FourthTarget };
 
         var barriers = new List<GameObject>();
         barriers.AddRange(FirstBarrier);
@@ -123,16 +126,17 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
         };
     }
 
-    public GameObject? GetTarget(int barrierNo)
+    public GameObject? GetTarget(int targetNo)
     {
-        return barrierNo switch
+        return targetNo switch
         {
+            0 => Origin,
             1 => FirstTarget,
             2 => SecondTarget,
             3 => ThirdTarget,
             4 => FourthTarget,
             _ => null
-        };
+        };;
     }
 
     public void UpdateTask(GameObject cube, GrabAnchor grabAnchor)
@@ -174,12 +178,26 @@ public class PickAndPlaceTaskBehaviour : MonoBehaviour
 
                         collisionCount++;
                         hasAlreadyCollided = true;
-
                         SetTarget(currentTarget - 1);
 
                         break;
                     }
                 }
+
+                //Check room divider barrier
+                if (!hasAlreadyCollided)
+                {
+                    if (RoomDividerBarrier.GetComponent<Collider>().bounds.Intersects(cubeCollider.bounds))
+                    {
+                        DM.TryVibrate(grabAnchor, 0.5f);
+                        RoomDividerBarrier.GetComponent<AudioSource>().Play();
+
+                        collisionCount++;
+                        hasAlreadyCollided = true;
+                        SetTarget(currentTarget - 1);
+                    }
+                }
+                
             }
         }
     }
