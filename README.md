@@ -1,5 +1,7 @@
-![pseudo_haptics_weird_logo](https://github.com/user-attachments/assets/5a3c00b2-b015-4d80-a562-fe1cbe5e636f)
-
+ <img src="https://github.com/user-attachments/assets/5a3c00b2-b015-4d80-a562-fe1cbe5e636f" 
+        alt="Picture" 
+        height="300" 
+        style="display: block; margin: 0 auto" />
 # pseudo-haptic-weight-lifting
 
 This repository contains the Unity VR application developed for my master thesis @ University of Innsbruck:
