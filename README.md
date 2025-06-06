@@ -21,8 +21,8 @@ The research of this thesis focuses on a dynamic weight-lifting task using a pro
 ___
 ## Assets:
 
-- Hand rigged 3D model: https://assetstore.unity.com/packages/tools/integration/meta-xr-all-in-one-sdk-269657
-- Environment 3D models: https://assetstore.unity.com/packages/3d/environments/landscapes/lowpoly-environment-pack-99479
-- Snow Textures: https://assetstore.unity.com/packages/2d/textures-materials/4-snow-materials-high-quality-materials-collection-69201
-- Other Textures: https://ambientcg.com/
-- Sound Effects: https://pixabay.com/sound-effects
+- [Rigged Hand 3D model](https://assetstore.unity.com/packages/tools/integration/meta-xr-all-in-one-sdk-269657)
+- [Environment 3D models](https://assetstore.unity.com/packages/3d/environments/landscapes/lowpoly-environment-pack-99479)
+- [Snow Textures](https://assetstore.unity.com/packages/2d/textures-materials/4-snow-materials-high-quality-materials-collection-69201)
+- [Other Textures](https://ambientcg.com/)
+- [Sound Effects](https://pixabay.com/sound-effects)
