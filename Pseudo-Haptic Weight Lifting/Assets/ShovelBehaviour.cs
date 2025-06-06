@@ -175,7 +175,7 @@ public class ShovelBehaviour : GrabBehaviour
 
         var originForward = Quaternion.AngleAxis(degreesToRotate, originRightHorizontal) * originForwardHorizontal;
 
-        var shiftedOrigin = new Pose(origin.position + headPosDiff, Quaternion.LookRotation(originForward, origin.up));
+        var shiftedOrigin = new Pose(origin.position + headPosDiff, Quaternion.LookRotation(originForward, Vector3.up));
         //var shiftedOrigin = new Pose(origin.position + headPosDiff, origin.rotation);
 
         ///Target Pos
