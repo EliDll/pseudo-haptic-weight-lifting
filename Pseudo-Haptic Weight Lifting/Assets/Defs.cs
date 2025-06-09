@@ -86,8 +86,8 @@ public record CDParams
 
     public static CDParams Pronounced_Loaded = new CDParams
     {
-        HorizontalRatio = 0.7f,
-        VerticalRatio = 0.6f,
+        HorizontalRatio = 0.75f,
+        VerticalRatio = 0.65f,
         Acceleration = 4f,
         RotationalRatio = 0.75f,
         SpinAcceleration = 360f,
