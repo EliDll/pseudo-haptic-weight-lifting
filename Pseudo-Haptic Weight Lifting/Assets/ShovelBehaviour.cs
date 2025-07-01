@@ -200,7 +200,9 @@ public class ShovelBehaviour : GrabBehaviour
 
         //Add clipping height to visible hands distance to make second hand position when clipping less jarring (Note that this is not accurate when shovel is not pointing straight down)
         //visualBetweenHandsDist = scaledBetweenHandsDist + clippingHeight;
-        visualBetweenHandsDist = scaledBetweenHandsDist;
+        var diff = scaledBetweenHandsDist - visualBetweenHandsDist;
+        var clampedDiff = Calc.Clamp(diff, min: -0.01f, max: 0.01f);
+        visualBetweenHandsDist += clampedDiff;
 
         //return new Pose(targetPos + clippingOffset, Quaternion.LookRotation(targetForward, targetUp));
 
