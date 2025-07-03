@@ -9,7 +9,7 @@ This repository contains the Unity VR application developed for my master thesis
 ___
 ## Cool acronyms:
 ### *PHLOAT* - Pseudo-Haptic Lifiting for Objects and Ambidextrous Tools
-### *SWEEP*- Simulating Weight and Enhancing Exertion through Pseudo-Haptics
+### *SWEEP* - Simulating Weight and Enhancing Exertion through Pseudo-Haptics
 ___
 ## Thesis:
 ### *Make me work for it* - Investigating the effect of pseudo-haptics on dynamic weight-lifting tasks in a virtual environment
