@@ -5,7 +5,10 @@
 # pseudo-haptic-weight-lifting
 
 This repository contains the Unity VR application developed for my master thesis @ University of Innsbruck:
+___
+## DISCLAIMER:
 
+In its current state, the Unity application is dependent on an OptiTrack external tracking setup, as it relies on the [Optitrack Unity Plugin](https://docs.optitrack.com/plugins/optitrack-unity-plugin) for synchronization with the physical environment. Since this plugin operates on x86 DLL's, the applicaiton currently **only works via Quest Link and cannot be deployed to Android-based HMD's**. Feel free to contact me if you want an up-to-date, deployable standalone version and release.
 ___
 ## Cool acronyms:
 ### *PHLOAT* - Pseudo-Haptic Lifiting for Objects and Ambidextrous Tools
