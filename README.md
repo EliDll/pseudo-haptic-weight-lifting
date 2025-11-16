@@ -22,15 +22,14 @@ is crucial for fidelity and maximizing skill transfer, particularly for tasks re
 interaction. Pseudo-haptic feedback, which leverages discrepancies between physical input and
 visual output, can elicit haptic sensations, such as weight or resistance, without the need for
 additional, scenario-specific hardware. As such, it can be used to substitute, or augment physically
-based haptic techniques.
-
-While previous research has demonstrated the efficacy of pseudo-haptic
+based haptic techniques. While previous research has demonstrated the efficacy of pseudo-haptic
 feedback under controlled conditions, little is known about its practical viability for prolonged,
-complex, and physically demanding interaction tasks. We set out to understand whether pseudo-
-haptic feedback can be utilized to make virtual object interaction feel more physically demanding,
-and therefore more believable. To this end, we conducted a user study that investigates the
-interplay between different intensities of pseudo-haptic feedback and choice of input modality, for
-the sample task of virtual snow shoveling.
+complex, and physically demanding interaction tasks.
+
+We set out to understand whether pseudo-haptic feedback can be utilized to make virtual object
+interaction feel more physically demanding, and therefore more believable. To this end, we
+conducted a user study that investigates the interplay between different intensities of pseudo-
+haptic feedback and choice of input modality, on the sample task of virtual snow shoveling.
 
 Our results demonstrate that, in terms of presence, precision, and perceived exertion, the input
 modality of haptic proxies provides substantial benefits over motion controllers, especially for
@@ -45,7 +44,6 @@ If carefully designed, it can heighten perceived effort, convey changes in kines
 and even encourage more natural user behavior. These findings suggest that pseudo-haptic
 feedback can enhance immersive virtual training, and kinesthetic interaction in general, by
 aligning perception and behavior in VR more closely with real-world activities.
-
 ___
 ## Assets:
 
