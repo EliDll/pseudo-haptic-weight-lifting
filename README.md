@@ -22,13 +22,16 @@ is crucial for fidelity and maximizing skill transfer, particularly for tasks re
 interaction. Pseudo-haptic feedback, which leverages discrepancies between physical input and
 visual output, can elicit haptic sensations, such as weight or resistance, without the need for
 additional, scenario-specific hardware. As such, it can be used to substitute, or augment physically
-based haptic techniques. While previous research has demonstrated the efficacy of pseudo-haptic
+based haptic techniques.
+
+While previous research has demonstrated the efficacy of pseudo-haptic
 feedback under controlled conditions, little is known about its practical viability for prolonged,
 complex, and physically demanding interaction tasks. We set out to understand whether pseudo-
 haptic feedback can be utilized to make virtual object interaction feel more physically demanding,
 and therefore more believable. To this end, we conducted a user study that investigates the
 interplay between different intensities of pseudo-haptic feedback and choice of input modality, for
 the sample task of virtual snow shoveling.
+
 Our results demonstrate that, in terms of presence, precision, and perceived exertion, the input
 modality of haptic proxies provides substantial benefits over motion controllers, especially for
 bimanual interaction, while physical exertion, as measured through heart rate, remains similar
@@ -36,6 +39,7 @@ for both. In our experiments, pseudo-haptic feedback intensity influenced how qu
 progressed toward a sustainable threshold, suggesting subtle effects on physical workload. We
 also observed that pseudo-haptic feedback decreased interaction presence when discrepancies in
 displacement became noticeable, typically near the limits of human range of motion.
+
 Ultimately, pseudo-haptic feedback proved effective at shaping how users feel and move in VR.
 If carefully designed, it can heighten perceived effort, convey changes in kinesthetic properties,
 and even encourage more natural user behavior. These findings suggest that pseudo-haptic
